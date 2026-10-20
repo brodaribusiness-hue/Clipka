@@ -12,7 +12,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -60,11 +59,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.Effects
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.Presentation
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
@@ -112,9 +114,6 @@ private fun ClipkaScreen() {
 
     var clips by remember { mutableStateOf(listOf<ClipSegment>()) }
     var selectedClipId by remember { mutableStateOf<String?>(null) }
-
-    // Null means the original video is being previewed.
-    // Otherwise, preview is limited to the chosen clip.
     var previewingClipId by remember { mutableStateOf<String?>(null) }
 
     var clipError by remember { mutableStateOf("") }
@@ -164,6 +163,7 @@ private fun ClipkaScreen() {
         previewingClipId = segment.id
         exoPlayer.pause()
         exoPlayer.seekTo(segment.startMs)
+
         if (play) {
             exoPlayer.play()
         }
@@ -216,11 +216,12 @@ private fun ClipkaScreen() {
             )
 
             isExporting = true
-            exportStatus = "Clip export ho rahi hai..."
+            exportStatus = "Clip crop aur export ho rahi hai..."
             exoPlayer.pause()
             isPlaying = false
 
             try {
+                // Step 1: Clip ko selected start/end time se trim karo.
                 val clippedMediaItem = MediaItem.Builder()
                     .setUri(sourceUri)
                     .setClippingConfiguration(
@@ -228,6 +229,30 @@ private fun ClipkaScreen() {
                             .setStartPositionMs(clipToExport.startMs)
                             .setEndPositionMs(clipToExport.endMs)
                             .build()
+                    )
+                    .build()
+
+                // Step 2: Is clip ka apna target aspect ratio set karo.
+                val targetAspectRatio = when (clipToExport.aspectRatio) {
+                    "9:16" -> 9f / 16f
+                    "1:1" -> 1f
+                    "16:9" -> 16f / 9f
+                    else -> 9f / 16f
+                }
+
+                // Crop the video to fill the selected aspect ratio.
+                val presentationEffect = Presentation.createForAspectRatio(
+                    targetAspectRatio,
+                    Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
+                )
+
+                // Step 3: Video effect ko export pipeline mein apply karo.
+                val editedMediaItem = EditedMediaItem.Builder(clippedMediaItem)
+                    .setEffects(
+                        Effects(
+                            emptyList(),
+                            listOf(presentationEffect)
+                        )
                     )
                     .build()
 
@@ -259,7 +284,7 @@ private fun ClipkaScreen() {
                                         activeTransformer = null
                                         pendingExportClip = null
                                         exportStatus =
-                                            "Export complete: ${clipToExport.name}.mp4"
+                                            "Export complete: ${clipToExport.name} (${clipToExport.aspectRatio})."
                                     }
                                 } catch (exception: Exception) {
                                     outputFile.delete()
@@ -291,8 +316,10 @@ private fun ClipkaScreen() {
                     .build()
 
                 activeTransformer = transformer
+
+                // Export the edited item, not the original trimmed item.
                 transformer.start(
-                    clippedMediaItem,
+                    editedMediaItem,
                     outputFile.absolutePath
                 )
             } catch (exception: Exception) {
@@ -899,9 +926,6 @@ private fun ClipkaScreen() {
                                                     }
                                                 }
                                             )
-                                            if (previewingClipId == segment.id) {
-                                                previewingClipId = segment.id
-                                            }
                                         },
                                         modifier = Modifier.weight(1f)
                                     ) {
@@ -972,7 +996,13 @@ private fun ClipkaScreen() {
                                 enabled = videoUri != null,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text(if (isPreviewing && isPlaying) "Playing" else "Preview")
+                                Text(
+                                    if (isPreviewing && isPlaying) {
+                                        "Playing"
+                                    } else {
+                                        "Preview"
+                                    }
+                                )
                             }
                         }
 
@@ -988,7 +1018,7 @@ private fun ClipkaScreen() {
             }
 
             Text(
-                text = "Per-clip preview ratios are independent. Export cropping, captions and batch export are later phases.",
+                text = "Each clip exports with its own selected aspect ratio.",
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
