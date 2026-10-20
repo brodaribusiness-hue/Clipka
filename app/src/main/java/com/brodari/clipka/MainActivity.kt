@@ -966,116 +966,170 @@ private fun ClipkaScreen() {
             }
 
 
-                Button(
-                onClick = {
-                    val clip = clips.firstOrNull {
-                        it.id == selectedClipId
-                    }
-
-                    if (
-                        clip != null &&
-                        videoUri != null &&
-                        !isExporting &&
-                        !isBatchExporting
-                    ) {
-                        pendingExportClip = clip
-                        exportDestinationPicker.launch(
-                            "${clip.name.replace(Regex("[^A-Za-z0-9_-]"), "_")}.mp4"
-                        )
-                    }
-                },
-                enabled = videoUri != null &&
-                    selectedClipId != null &&
-                    !isExporting &&
-                    !isBatchExporting,
-                modifier = Modifier.fillMaxWidth()
+                
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = ClipkaCard
             ) {
-                Text(
-                    if (isExporting) {
-                        "Exporting MP4..."
-                    } else {
-                        "Export Selected Clip (MP4)"
-                    }
-                )
-            }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "EXPORT CLIPS",
+                        color = ClipkaAccent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
 
-            Button(
-                onClick = {
-                    val sourceUri = videoUri
-                    val clipsToExport = clips.toList()
+                    Text(
+                        text = "Save your edited videos",
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
-                    if (
-                        sourceUri != null &&
-                        clipsToExport.isNotEmpty() &&
-                        !isExporting &&
-                        !isBatchExporting
-                    ) {
-                        exoPlayer.pause()
-                        isPlaying = false
-                        isBatchExporting = true
-                        exportStatus = "ZIP export shuru ho raha hai..."
+                    Text(
+                        text = "Selected clip: individual MP4 file",
+                        color = Color.LightGray,
+                        fontSize = 12.sp
+                    )
 
-                        val exporter = BatchZipExporter(
-                            context = context,
-                            sourceUri = sourceUri,
-                            clips = clipsToExport,
-                            onProgress = { message ->
-                                Handler(Looper.getMainLooper()).post {
-                                    exportStatus = message
-                                }
-                            },
-                            onComplete = { zipFile ->
-                                activeBatchExporter = null
-
-                                if (zipFile == null) {
-                                    isBatchExporting = false
-
-                                    if (
-                                        !exportStatus.startsWith("Failed:") &&
-                                        !exportStatus.startsWith("ZIP failed:")
-                                    ) {
-                                        exportStatus =
-                                            "ZIP export fail hua. Status check karo."
-                                    }
-                                } else {
-                                    pendingZipFile = zipFile
-                                    zipDestinationPicker.launch(
-                                        "Clipka_Clips.zip"
-                                    )
-                                }
+                    Button(
+                        onClick = {
+                            val clip = clips.firstOrNull {
+                                it.id == selectedClipId
                             }
+
+                            if (
+                                clip != null &&
+                                videoUri != null &&
+                                !isExporting &&
+                                !isBatchExporting
+                            ) {
+                                pendingExportClip = clip
+                                exportDestinationPicker.launch(
+                                    "${clip.name.replace(Regex("[^A-Za-z0-9_-]"), "_")}.mp4"
+                                )
+                            }
+                        },
+                        enabled = videoUri != null &&
+                            selectedClipId != null &&
+                            !isExporting &&
+                            !isBatchExporting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text(
+                            if (isExporting) {
+                                "Exporting MP4..."
+                            } else {
+                                "Export Selected Clip (MP4)"
+                            },
+                            fontWeight = FontWeight.SemiBold
                         )
+                    }
 
-                        activeBatchExporter = exporter
-                        exporter.start()
+                    Divider(color = Color.DarkGray)
+
+                    Text(
+                        text = "All clips: one ZIP archive",
+                        color = Color.LightGray,
+                        fontSize = 12.sp
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            val sourceUri = videoUri
+                            val clipsToExport = clips.toList()
+
+                            if (
+                                sourceUri != null &&
+                                clipsToExport.isNotEmpty() &&
+                                !isExporting &&
+                                !isBatchExporting
+                            ) {
+                                exoPlayer.pause()
+                                isPlaying = false
+                                isBatchExporting = true
+                                exportStatus = "ZIP export shuru ho raha hai..."
+
+                                val exporter = BatchZipExporter(
+                                    context = context,
+                                    sourceUri = sourceUri,
+                                    clips = clipsToExport,
+                                    onProgress = { message ->
+                                        Handler(Looper.getMainLooper()).post {
+                                            exportStatus = message
+                                        }
+                                    },
+                                    onComplete = { zipFile ->
+                                        activeBatchExporter = null
+
+                                        if (zipFile == null) {
+                                            isBatchExporting = false
+
+                                            if (
+                                                !exportStatus.startsWith("Failed:") &&
+                                                !exportStatus.startsWith("ZIP failed:")
+                                            ) {
+                                                exportStatus =
+                                                    "ZIP export fail hua. Status check karo."
+                                            }
+                                        } else {
+                                            pendingZipFile = zipFile
+                                            zipDestinationPicker.launch(
+                                                "Clipka_Clips.zip"
+                                            )
+                                        }
+                                    }
+                                )
+
+                                activeBatchExporter = exporter
+                                exporter.start()
+                            }
+                        },
+                        enabled = videoUri != null &&
+                            clips.isNotEmpty() &&
+                            !isExporting &&
+                            !isBatchExporting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Text(
+                            if (isBatchExporting) {
+                                "Exporting Clips / ZIP..."
+                            } else {
+                                "Export All Clips (ZIP)"
+                            },
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                },
-                enabled = videoUri != null &&
-                    clips.isNotEmpty() &&
-                    !isExporting &&
-                    !isBatchExporting,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    if (isBatchExporting) {
-                        "Exporting Clips / ZIP..."
-                    } else {
-                        "Export All Clips (ZIP)"
+
+                    if (exportStatus.isNotEmpty()) {
+                        Text(
+                            text = exportStatus,
+                            color = if (
+                                exportStatus.startsWith("Export complete")
+                            ) {
+                                ClipkaAccent
+                            } else {
+                                Color.LightGray
+                            },
+                            fontSize = 13.sp
+                        )
                     }
-                )
+                }
             }
 
-            if (exportStatus.isNotEmpty()) {
-                Text(
-                    text = exportStatus,
-                    color = if (exportStatus.startsWith("Export complete")) {
-                        ClipkaAccent
-                    } else {
-                        Color.LightGray
-                    },
-                    fontSize = 13.sp
-                )
-            }
 
             Text(
                 text = "Clip Editing",
