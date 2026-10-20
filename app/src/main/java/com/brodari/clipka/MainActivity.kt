@@ -476,54 +476,89 @@ private fun ClipkaScreen() {
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Row(
+            
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                shape = RoundedCornerShape(20.dp),
+                color = ClipkaCard
             ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = "Clipka",
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ClipkaAccent
-                    )
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            text = "CLIPKA",
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ClipkaAccent
+                        )
 
-                    Text(
-                        text = "AI Video Clip Studio",
-                        color = Color.LightGray,
-                        fontSize = 13.sp
-                    )
-                }
+                        Text(
+                            text = "AI VIDEO CLIP STUDIO",
+                            color = Color.LightGray,
+                            fontSize = 11.sp,
+                            letterSpacing = 1.sp
+                        )
 
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = ClipkaCard
-                ) {
-                    Text(
-                        text = "${clips.size} Clips",
-                        modifier = Modifier.padding(
-                            horizontal = 12.dp,
-                            vertical = 8.dp
-                        ),
-                        color = ClipkaAccent,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp
-                    )
+                        Text(
+                            text = if (videoUri != null) {
+                                "Project ready to edit"
+                            } else {
+                                "Create your next short"
+                            },
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = ClipkaBackground
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(
+                                horizontal = 15.dp,
+                                vertical = 11.dp
+                            ),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                text = clips.size.toString(),
+                                color = ClipkaAccent,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Text(
+                                text = "CLIPS",
+                                color = Color.LightGray,
+                                fontSize = 10.sp,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
                 }
             }
 
             Text(
                 text = if (previewClip != null) {
-                    "Clip Preview • ${previewClip.aspectRatio}"
+                    "CLIP PREVIEW  •  ${previewClip.aspectRatio}"
                 } else {
-                    "Original Video Preview"
+                    "VIDEO PREVIEW"
                 },
                 color = Color.White,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
             )
+
 
             BoxWithConstraints(
                 modifier = Modifier
