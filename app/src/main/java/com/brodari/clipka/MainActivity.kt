@@ -74,6 +74,8 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.compose.material3.Divider
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 private val ClipkaAccent = Color(0xFFB7A9FF)
 private val ClipkaBackground = Color(0xFF101116)
@@ -119,6 +121,9 @@ private fun ClipkaScreen() {
 
     var clipError by remember { mutableStateOf("") }
     var exportStatus by remember { mutableStateOf("") }
+    var faceDetectionStatus by remember { mutableStateOf("") }
+var isDetectingFaces by remember { mutableStateOf(false) }
+val faceDetectionScope = rememberCoroutineScope()
     var isExporting by remember { mutableStateOf(false) }
     var pendingExportClip by remember { mutableStateOf<ClipSegment?>(null) }
     var activeTransformer by remember { mutableStateOf<Transformer?>(null) }
