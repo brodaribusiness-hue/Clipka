@@ -15,12 +15,48 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sqrt
 
 /**
- * Detects faces in the middle frame of a selected clip.
- * Runs locally on the device; no video is uploaded.
+ * Detects faces at multiple points in a clip.
+ *
+ * All processing happens locally on the device.
+ * Video frames are not uploaded to a server.
  */
 object ClipkaFaceDetection {
+
+    private const val SAMPLE_COUNT = 5
+    private const val FACE_MATCH_DISTANCE = 0.18f
+
+    private data class FaceCluster(
+        var leftTotal: Float,
+        var topTotal: Float,
+        var rightTotal: Float,
+        var bottomTotal: Float,
+        var count: Int,
+        var largestArea: Float
+    ) {
+        fun add(bounds: RectF) {
+            leftTotal += bounds.left
+            topTotal += bounds.top
+            rightTotal += bounds.right
+            bottomTotal += bounds.bottom
+            count++
+
+            val area = bounds.width() * bounds.height()
+            largestArea = max(largestArea, area)
+        }
+
+        fun averageBounds(): RectF {
+            val divisor = count.toFloat()
+            return RectF(
+                leftTotal / divisor,
+                topTotal / divisor,
+                rightTotal / divisor,
+                bottomTotal / divisor
+            )
+        }
+    }
 
     suspend fun detectFaces(
         context: Context,
@@ -35,19 +71,11 @@ object ClipkaFaceDetection {
         }
 
         val retriever = MediaMetadataRetriever()
-        var bitmap: Bitmap? = null
+        val clusters = mutableListOf<FaceCluster>()
+        var processedFrames = 0
 
         try {
             retriever.setDataSource(context, videoUri)
-
-            val middleMs = startMs + (endMs - startMs) / 2L
-
-            bitmap = retriever.getFrameAtTime(
-                middleMs * 1000L,
-                MediaMetadataRetriever.OPTION_CLOSEST
-            ) ?: throw IllegalStateException(
-                "Could not read a frame from this video."
-            )
 
             val options = FaceDetectorOptions.Builder()
                 .setPerformanceMode(
@@ -59,62 +87,180 @@ object ClipkaFaceDetection {
             val detector = FaceDetection.getClient(options)
 
             try {
-                val image = InputImage.fromBitmap(bitmap, 0)
-                val faces: List<Face> = Tasks.await(
-                    detector.process(image)
-                )
+                val clipLengthMs = endMs - startMs
 
-                faces
-                    .sortedByDescending { face ->
-                        face.boundingBox.width().toLong() *
-                            face.boundingBox.height().toLong()
-                    }
-                    .take(maxFaces.coerceIn(1, 10))
-                    .mapIndexed { index, face ->
-                        createFrameRegion(
-                            face = face,
-                            index = index,
-                            imageWidth = bitmap.width,
-                            imageHeight = bitmap.height
+                for (sampleIndex in 0 until SAMPLE_COUNT) {
+                    val sampleMs = startMs +
+                        (clipLengthMs * sampleIndex / SAMPLE_COUNT)
+
+                    var bitmap: Bitmap? = null
+
+                    try {
+                        bitmap = retriever.getFrameAtTime(
+                            sampleMs * 1000L,
+                            MediaMetadataRetriever.OPTION_CLOSEST
                         )
+
+                        val currentBitmap = bitmap ?: continue
+
+                        if (
+                            currentBitmap.width <= 0 ||
+                            currentBitmap.height <= 0
+                        ) {
+                            continue
+                        }
+
+                        val image = InputImage.fromBitmap(
+                            currentBitmap,
+                            0
+                        )
+
+                        val faces: List<Face> = Tasks.await(
+                            detector.process(image)
+                        )
+
+                        processedFrames++
+
+                        val imageDiagonal = sqrt(
+                            currentBitmap.width.toFloat() *
+                                currentBitmap.width +
+                                currentBitmap.height.toFloat() *
+                                currentBitmap.height
+                        ).coerceAtLeast(1f)
+
+                        for (face in faces) {
+                            val bounds = RectF(face.boundingBox)
+
+                            bounds.left = bounds.left.coerceIn(
+                                0f,
+                                currentBitmap.width.toFloat()
+                            )
+                            bounds.top = bounds.top.coerceIn(
+                                0f,
+                                currentBitmap.height.toFloat()
+                            )
+                            bounds.right = bounds.right.coerceIn(
+                                0f,
+                                currentBitmap.width.toFloat()
+                            )
+                            bounds.bottom = bounds.bottom.coerceIn(
+                                0f,
+                                currentBitmap.height.toFloat()
+                            )
+
+                            if (
+                                bounds.width() <= 0f ||
+                                bounds.height() <= 0f
+                            ) {
+                                continue
+                            }
+
+                            val faceCenterX =
+                                (bounds.left + bounds.right) / 2f
+                            val faceCenterY =
+                                (bounds.top + bounds.bottom) / 2f
+
+                            val matchingCluster = clusters.minByOrNull {
+                                cluster ->
+                                val average = cluster.averageBounds()
+                                val clusterCenterX =
+                                    (average.left + average.right) / 2f
+                                val clusterCenterY =
+                                    (average.top + average.bottom) / 2f
+
+                                val dx = faceCenterX - clusterCenterX
+                                val dy = faceCenterY - clusterCenterY
+
+                                sqrt(dx * dx + dy * dy) /
+                                    imageDiagonal
+                            }?.takeIf { cluster ->
+                                val average = cluster.averageBounds()
+                                val clusterCenterX =
+                                    (average.left + average.right) / 2f
+                                val clusterCenterY =
+                                    (average.top + average.bottom) / 2f
+
+                                val dx = faceCenterX - clusterCenterX
+                                val dy = faceCenterY - clusterCenterY
+
+                                sqrt(dx * dx + dy * dy) /
+                                    imageDiagonal <= FACE_MATCH_DISTANCE
+                            }
+
+                            if (matchingCluster != null) {
+                                matchingCluster.add(bounds)
+                            } else {
+                                clusters.add(
+                                    FaceCluster(
+                                        leftTotal = bounds.left,
+                                        topTotal = bounds.top,
+                                        rightTotal = bounds.right,
+                                        bottomTotal = bounds.bottom,
+                                        count = 1,
+                                        largestArea =
+                                            bounds.width() * bounds.height()
+                                    )
+                                )
+                            }
+                        }
+                    } finally {
+                        bitmap?.recycle()
                     }
+                }
             } finally {
                 detector.close()
             }
         } finally {
-            bitmap?.recycle()
             retriever.release()
         }
+
+        if (processedFrames == 0) {
+            throw IllegalStateException(
+                "Could not read video frames. Try another video."
+            )
+        }
+
+        clusters
+            .sortedWith(
+                compareByDescending<FaceCluster> { it.count }
+                    .thenByDescending { it.largestArea }
+            )
+            .take(maxFaces.coerceIn(1, 10))
+            .mapIndexed { index, cluster ->
+                createFrameRegion(
+                    bounds = cluster.averageBounds(),
+                    index = index,
+                    imageWidth = getVideoWidth(context, videoUri),
+                    imageHeight = getVideoHeight(context, videoUri)
+                )
+            }
     }
 
     private fun createFrameRegion(
-        face: Face,
+        bounds: RectF,
         index: Int,
         imageWidth: Int,
         imageHeight: Int
     ): FrameRegion {
-        val bounds = RectF(face.boundingBox)
+        val safeWidth = imageWidth.coerceAtLeast(1).toFloat()
+        val safeHeight = imageHeight.coerceAtLeast(1).toFloat()
 
-        // Add space around the face for a more useful crop.
+        // Add room around the face so the crop includes more than the face.
         val extraX = bounds.width() * 0.45f
         val extraY = bounds.height() * 0.75f
 
         val left = max(0f, bounds.left - extraX)
         val top = max(0f, bounds.top - extraY)
-        val right = min(
-            imageWidth.toFloat(),
-            bounds.right + extraX
-        )
-        val bottom = min(
-            imageHeight.toFloat(),
-            bounds.bottom + extraY
-        )
+        val right = min(safeWidth, bounds.right + extraX)
+        val bottom = min(safeHeight, bounds.bottom + extraY)
 
-        val x = (left / imageWidth).coerceIn(0f, 1f)
-        val y = (top / imageHeight).coerceIn(0f, 1f)
-        val width = ((right - left) / imageWidth)
+        val x = (left / safeWidth).coerceIn(0f, 1f)
+        val y = (top / safeHeight).coerceIn(0f, 1f)
+
+        val width = ((right - left) / safeWidth)
             .coerceIn(0.01f, 1f - x)
-        val height = ((bottom - top) / imageHeight)
+
+        val height = ((bottom - top) / safeHeight)
             .coerceIn(0.01f, 1f - y)
 
         return FrameRegion(
@@ -125,5 +271,45 @@ object ClipkaFaceDetection {
             height = height,
             detectedFace = true
         )
+    }
+
+    private fun getVideoWidth(
+        context: Context,
+        videoUri: Uri
+    ): Int {
+        return getVideoDimension(
+            context,
+            videoUri,
+            MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
+        )
+    }
+
+    private fun getVideoHeight(
+        context: Context,
+        videoUri: Uri
+    ): Int {
+        return getVideoDimension(
+            context,
+            videoUri,
+            MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
+        )
+    }
+
+    private fun getVideoDimension(
+        context: Context,
+        videoUri: Uri,
+        metadataKey: Int
+    ): Int {
+        val retriever = MediaMetadataRetriever()
+
+        return try {
+            retriever.setDataSource(context, videoUri)
+            retriever.extractMetadata(metadataKey)
+                ?.toIntOrNull()
+                ?.coerceAtLeast(1)
+                ?: 1
+        } finally {
+            retriever.release()
+        }
     }
 }
