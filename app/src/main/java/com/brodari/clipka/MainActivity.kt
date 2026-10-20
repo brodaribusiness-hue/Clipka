@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
@@ -95,6 +95,9 @@ private fun ClipkaScreen() {
     val player = remember {
         ExoPlayer.Builder(context).build()
     }
+
+    // Separate reference avoids PlayerView.player name shadowing.
+    val previewPlayer = player
 
     val videoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -204,6 +207,7 @@ private fun ClipkaScreen() {
                                 modifier = Modifier.size(52.dp),
                                 tint = Color(0xFFB7A9FF)
                             )
+
                             Text(
                                 text = "Select a video to preview",
                                 color = Color.White
@@ -214,12 +218,12 @@ private fun ClipkaScreen() {
                             modifier = Modifier.fillMaxSize(),
                             factory = { viewContext ->
                                 PlayerView(viewContext).apply {
-                                    player = this@ClipkaScreenPlayer(player)
+                                    this.player = previewPlayer
                                     useController = false
                                 }
                             },
                             update = { view ->
-                                view.player = player
+                                view.player = previewPlayer
                             }
                         )
                     }
@@ -381,7 +385,11 @@ private fun ClipkaScreen() {
                         else -> ""
                     }
 
-                    if (clipError.isEmpty() && start != null && end != null) {
+                    if (
+                        clipError.isEmpty() &&
+                        start != null &&
+                        end != null
+                    ) {
                         clips = clips + ClipSegment(
                             name = "Clip ${clips.size + 1}",
                             startMs = start,
@@ -439,10 +447,12 @@ private fun ClipkaScreen() {
                                 color = Color.White,
                                 fontWeight = FontWeight.Bold
                             )
+
                             Text(
                                 text = "${formatTime(clip.startMs)} - ${formatTime(clip.endMs)}",
                                 color = Color.LightGray
                             )
+
                             Text(
                                 text = "Duration: ${formatTime(clip.durationMs)}",
                                 color = Color(0xFFB7A9FF)
@@ -451,7 +461,9 @@ private fun ClipkaScreen() {
 
                         Button(
                             onClick = {
-                                clips = clips.filterNot { it.id == clip.id }
+                                clips = clips.filterNot {
+                                    it.id == clip.id
+                                }
                             }
                         ) {
                             Text("Delete")
@@ -495,12 +507,17 @@ private fun parseTime(value: String): Long? {
 
     if (numbers.any { it < 0L }) return null
     if (numbers.last() >= 60L) return null
-    if (parts.size == 3 && numbers[1] >= 60L) return null
+
+    if (parts.size == 3 && numbers[1] >= 60L) {
+        return null
+    }
 
     val totalSeconds = if (parts.size == 2) {
         numbers[0] * 60L + numbers[1]
     } else {
-        numbers[0] * 3600L + numbers[1] * 60L + numbers[2]
+        numbers[0] * 3600L +
+            numbers[1] * 60L +
+            numbers[2]
     }
 
     return totalSeconds * 1000L
