@@ -548,6 +548,17 @@ private fun ClipkaScreen() {
                     }
                 }
             }
+                        Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = ClipkaCard
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
 
                         Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -683,7 +694,8 @@ private fun ClipkaScreen() {
                     }
                 }
             }
-
+                }
+                        }
             Text(
                 text = if (previewClip != null) {
                     "Previewing ${previewClip.name}: " +
