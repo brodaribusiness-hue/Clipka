@@ -1459,40 +1459,126 @@ private fun ClipkaScreen() {
                         }
                     )
                 ) {
+                    
                     Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            text = segment.name +
-                                if (isSelected) " • Selected" else "",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = segment.name,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    text = if (isSelected) {
+                                        "SELECTED CLIP"
+                                    } else {
+                                        "VIDEO CLIP"
+                                    },
+                                    color = if (isSelected) {
+                                        ClipkaAccent
+                                    } else {
+                                        Color.LightGray
+                                    },
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFF353044)
+                            ) {
+                                Text(
+                                    text = formatTime(segment.durationMs),
+                                    modifier = Modifier.padding(
+                                        horizontal = 10.dp,
+                                        vertical = 7.dp
+                                    ),
+                                    color = ClipkaAccent,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF15161D)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "START",
+                                        color = Color.LightGray,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = formatTime(segment.startMs),
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+
+                                Text(
+                                    text = "→",
+                                    color = ClipkaAccent,
+                                    fontSize = 20.sp
+                                )
+
+                                Column {
+                                    Text(
+                                        text = "END",
+                                        color = Color.LightGray,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = formatTime(segment.endMs),
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
 
                         Text(
-                            text = "${formatTime(segment.startMs)} - " +
-                                formatTime(segment.endMs),
-                            color = Color.LightGray
-                        )
-
-                        Text(
-                            text = "Duration: ${formatTime(segment.durationMs)}",
-                            color = ClipkaAccent
-                        )
-
-                        Text(
-                            text = "This clip's aspect ratio",
-                            color = Color.White,
-                            fontSize = 13.sp
+                            text = "OUTPUT ASPECT RATIO",
+                            color = Color.LightGray,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
                         )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             listOf("9:16", "1:1", "16:9").forEach { ratio ->
-                                if (segment.aspectRatio == ratio) {
+                                val ratioSelected = segment.aspectRatio == ratio
+
+                                if (ratioSelected) {
                                     Button(
                                         onClick = {
                                             applyClipChange(
@@ -1505,7 +1591,10 @@ private fun ClipkaScreen() {
                                                 }
                                             )
                                         },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(42.dp),
+                                        shape = RoundedCornerShape(10.dp)
                                     ) {
                                         Text(ratio)
                                     }
@@ -1522,22 +1611,29 @@ private fun ClipkaScreen() {
                                                 }
                                             )
                                         },
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(42.dp),
+                                        shape = RoundedCornerShape(10.dp)
                                     ) {
                                         Text(ratio)
                                     }
                                 }
                             }
                         }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             OutlinedButton(
                                 onClick = {
                                     showClipInPreview(segment, play = false)
                                 },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp),
+                                shape = RoundedCornerShape(10.dp)
                             ) {
                                 Text("Edit")
                             }
@@ -1561,7 +1657,10 @@ private fun ClipkaScreen() {
                                         exoPlayer.pause()
                                     }
                                 },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp),
+                                shape = RoundedCornerShape(10.dp)
                             ) {
                                 Text("Delete")
                             }
@@ -1571,7 +1670,10 @@ private fun ClipkaScreen() {
                                     showClipInPreview(segment, play = true)
                                 },
                                 enabled = videoUri != null,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(42.dp),
+                                shape = RoundedCornerShape(10.dp)
                             ) {
                                 Text(
                                     if (isPreviewing && isPlaying) {
@@ -1585,14 +1687,13 @@ private fun ClipkaScreen() {
 
                         if (isPreviewing) {
                             Text(
-                                text = "Currently shown in main preview",
+                                text = "●  Currently shown in main preview",
                                 color = ClipkaAccent,
                                 fontSize = 12.sp
                             )
                         }
                     }
-                }
-            }
+
 
             val frameEditorClip = clips.firstOrNull {
                 it.id == selectedClipId
