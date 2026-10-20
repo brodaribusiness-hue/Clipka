@@ -239,16 +239,8 @@ val faceDetectionScope = rememberCoroutineScope()
                     )
                     .build()
 
-                // Step 2: Is clip ka apna target aspect ratio set karo.
-                val targetAspectRatio = when (clipToExport.aspectRatio) {
-                    "9:16" -> 9f / 16f
-                    "1:1" -> 1f
-                    "16:9" -> 16f / 9f
-                    else -> 9f / 16f
-                }
-
                 
-                // Step 2: Selected aspect ratio aur custom frame.
+                // Step 2: Selected aspect ratio set karo.
                 val targetAspectRatio = when (clipToExport.aspectRatio) {
                     "9:16" -> 9f / 16f
                     "1:1" -> 1f
@@ -261,7 +253,9 @@ val faceDetectionScope = rememberCoroutineScope()
                     Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
                 )
 
+                // Step 3: SINGLE layout ka custom frame crop.
                 val selectedFrame = clipToExport.frames.firstOrNull()
+
                 val videoEffects = if (
                     clipToExport.frameLayout == "SINGLE" &&
                     selectedFrame != null
@@ -281,7 +275,7 @@ val faceDetectionScope = rememberCoroutineScope()
                     listOf(presentationEffect)
                 }
 
-                // Step 3: Effects ko export item par apply karo.
+                // Step 4: Effects export item par apply karo.
                 val editedMediaItem = EditedMediaItem.Builder(clippedMediaItem)
                     .setEffects(
                         Effects(
@@ -291,12 +285,6 @@ val faceDetectionScope = rememberCoroutineScope()
                     )
                     .build()
 
-                        Effects(
-                            emptyList(),
-                            listOf(presentationEffect)
-                        )
-                    )
-                    .build()
 
                 val transformer = Transformer.Builder(context)
                     .addListener(object : Transformer.Listener {
