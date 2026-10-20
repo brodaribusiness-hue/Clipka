@@ -572,6 +572,23 @@ Box(
                 fontSize = 12.sp
             )
 
+                        Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = ClipkaCard
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "VIDEO CONTROLS",
+                        color = ClipkaAccent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
             Button(
                 onClick = {
                     videoPicker.launch(arrayOf("video/*"))
@@ -647,7 +664,8 @@ Box(
                     Text("Restart Original")
                 }
             }
-
+                } 
+                        } 
             Text(
                 text = "Video Timeline",
                 color = Color.White,
