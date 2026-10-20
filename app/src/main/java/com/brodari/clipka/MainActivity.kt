@@ -128,6 +128,12 @@ private fun ClipkaScreen() {
     var pendingExportClip by remember { mutableStateOf<ClipSegment?>(null) }
     var activeTransformer by remember { mutableStateOf<Transformer?>(null) }
 
+    var isBatchExporting by remember { mutableStateOf(false) }
+    var pendingZipFile by remember { mutableStateOf<File?>(null) }
+    var activeBatchExporter by remember {
+        mutableStateOf<BatchZipExporter?>(null)
+    }
+
     var undoStack by remember {
         mutableStateOf(listOf<List<ClipSegment>>())
     }
@@ -227,7 +233,6 @@ private fun ClipkaScreen() {
             isPlaying = false
 
             try {
-                // Step 1: Clip ko selected start/end time se trim karo.
                 val clippedMediaItem = MediaItem.Builder()
                     .setUri(sourceUri)
                     .setClippingConfiguration(
@@ -238,7 +243,6 @@ private fun ClipkaScreen() {
                     )
                     .build()
 
-                // Step 2: Selected aspect ratio set karo.
                 val targetAspectRatio = when (clipToExport.aspectRatio) {
                     "9:16" -> 9f / 16f
                     "1:1" -> 1f
@@ -251,7 +255,6 @@ private fun ClipkaScreen() {
                     Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
                 )
 
-                // Step 3: SINGLE layout ka custom frame crop.
                 val selectedFrame = clipToExport.frames.firstOrNull()
 
                 val videoEffects = if (
@@ -273,7 +276,6 @@ private fun ClipkaScreen() {
                     listOf(presentationEffect)
                 }
 
-                // Step 4: Effects export item par apply karo.
                 val editedMediaItem = EditedMediaItem.Builder(clippedMediaItem)
                     .setEffects(
                         Effects(
@@ -344,7 +346,6 @@ private fun ClipkaScreen() {
 
                 activeTransformer = transformer
 
-                // Export the edited item, not the original trimmed item.
                 transformer.start(
                     editedMediaItem,
                     outputFile.absolutePath
@@ -360,6 +361,59 @@ private fun ClipkaScreen() {
         }
     }
 
+    val zipDestinationPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { destinationUri: Uri? ->
+        val zipFile = pendingZipFile
+
+        if (destinationUri == null) {
+            zipFile?.delete()
+            pendingZipFile = null
+            isBatchExporting = false
+            activeBatchExporter = null
+            exportStatus = "ZIP save cancelled."
+        } else if (zipFile == null || !zipFile.exists()) {
+            pendingZipFile = null
+            isBatchExporting = false
+            activeBatchExporter = null
+            exportStatus = "ZIP file nahi mili."
+        } else {
+            exportStatus = "ZIP save ho rahi hai..."
+
+            Thread {
+                try {
+                    val outputStream = context.contentResolver
+                        .openOutputStream(destinationUri)
+                        ?: throw IOException("Save location open nahi hui.")
+
+                    outputStream.use { destination ->
+                        zipFile.inputStream().use { input ->
+                            input.copyTo(destination)
+                        }
+                    }
+
+                    zipFile.delete()
+
+                    Handler(Looper.getMainLooper()).post {
+                        pendingZipFile = null
+                        isBatchExporting = false
+                        activeBatchExporter = null
+                        exportStatus = "Export complete: ZIP saved."
+                    }
+                } catch (exception: Exception) {
+                    zipFile.delete()
+
+                    Handler(Looper.getMainLooper()).post {
+                        pendingZipFile = null
+                        isBatchExporting = false
+                        activeBatchExporter = null
+                        exportStatus =
+                            "ZIP save failed: ${exception.message ?: "unknown error"}"
+                    }
+                }
+            }.start()
+        }
+    }
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -700,13 +754,18 @@ private fun ClipkaScreen() {
                 Text(formatTime(durationMs), color = Color.LightGray)
             }
 
-            Button(
+                Button(
                 onClick = {
                     val clip = clips.firstOrNull {
                         it.id == selectedClipId
                     }
 
-                    if (clip != null && videoUri != null && !isExporting) {
+                    if (
+                        clip != null &&
+                        videoUri != null &&
+                        !isExporting &&
+                        !isBatchExporting
+                    ) {
                         pendingExportClip = clip
                         exportDestinationPicker.launch(
                             "${clip.name.replace(Regex("[^A-Za-z0-9_-]"), "_")}.mp4"
@@ -715,7 +774,8 @@ private fun ClipkaScreen() {
                 },
                 enabled = videoUri != null &&
                     selectedClipId != null &&
-                    !isExporting,
+                    !isExporting &&
+                    !isBatchExporting,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
@@ -723,6 +783,72 @@ private fun ClipkaScreen() {
                         "Exporting MP4..."
                     } else {
                         "Export Selected Clip (MP4)"
+                    }
+                )
+            }
+
+            Button(
+                onClick = {
+                    val sourceUri = videoUri
+                    val clipsToExport = clips.toList()
+
+                    if (
+                        sourceUri != null &&
+                        clipsToExport.isNotEmpty() &&
+                        !isExporting &&
+                        !isBatchExporting
+                    ) {
+                        exoPlayer.pause()
+                        isPlaying = false
+                        isBatchExporting = true
+                        exportStatus = "ZIP export shuru ho raha hai..."
+
+                        val exporter = BatchZipExporter(
+                            context = context,
+                            sourceUri = sourceUri,
+                            clips = clipsToExport,
+                            onProgress = { message ->
+                                Handler(Looper.getMainLooper()).post {
+                                    exportStatus = message
+                                }
+                            },
+                            onComplete = { zipFile ->
+                                activeBatchExporter = null
+
+                                if (zipFile == null) {
+                                    isBatchExporting = false
+
+                                    if (
+                                        !exportStatus.startsWith("Failed:") &&
+                                        !exportStatus.startsWith("ZIP failed:")
+                                    ) {
+                                        exportStatus =
+                                            "ZIP export fail hua. Status check karo."
+                                    }
+                                } else {
+                                    pendingZipFile = zipFile
+                                    zipDestinationPicker.launch(
+                                        "Clipka_Clips.zip"
+                                    )
+                                }
+                            }
+                        )
+
+                        activeBatchExporter = exporter
+                        exporter.start()
+                    }
+                },
+                enabled = videoUri != null &&
+                    clips.isNotEmpty() &&
+                    !isExporting &&
+                    !isBatchExporting,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    if (isBatchExporting) {
+                        "Exporting Clips / ZIP..."
+                    } else {
+                        "Export All Clips (ZIP)"
                     }
                 )
             }
@@ -1035,7 +1161,6 @@ private fun ClipkaScreen() {
                                 }
                             }
                         }
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1285,3 +1410,4 @@ private fun formatTime(milliseconds: Long): String {
         "%02d:%02d".format(minutes, seconds)
     }
 }
+                        
