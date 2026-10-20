@@ -497,13 +497,15 @@ Box(
         }
     )
 
-    if (previewClip != null && previewClip.frames.isNotEmpty()) {
+        if (previewClip != null && previewClip.frames.isNotEmpty()) {
         FramePreviewOverlay(
             frames = previewClip.frames,
             modifier = Modifier.fillMaxSize()
         )
     }
 }
+                    }
+                }
                     } 
 
             Text(
