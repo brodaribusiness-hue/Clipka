@@ -425,18 +425,46 @@ val faceDetectionScope = rememberCoroutineScope()
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
-                text = "clipka",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                color = ClipkaAccent
-            )
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Clipka",
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ClipkaAccent
+                    )
 
-            Text(
-                text = "AI Video Clip Studio",
-                color = Color.LightGray,
-                fontSize = 14.sp
-            )
+                    Text(
+                        text = "AI Video Clip Studio",
+                        color = Color.LightGray,
+                        fontSize = 13.sp
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = ClipkaCard
+                ) {
+                    Text(
+                        text = "${clips.size} Clips",
+                        modifier = Modifier.padding(
+                            horizontal = 12.dp,
+                            vertical = 8.dp
+                        ),
+                        color = ClipkaAccent,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+
 
             Text(
                 text = if (previewClip != null) {
