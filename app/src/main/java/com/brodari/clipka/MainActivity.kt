@@ -1,3 +1,5 @@
+File path: "app/src/main/java/com/brodari/clipka/MainActivity.kt"
+
 package com.brodari.clipka
 
 import android.net.Uri
@@ -7,6 +9,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +34,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -90,14 +95,39 @@ private fun ClipkaScreen() {
     var startInput by remember { mutableStateOf("00:00") }
     var endInput by remember { mutableStateOf("00:30") }
     var clips by remember { mutableStateOf(listOf<ClipSegment>()) }
+    var selectedClipId by remember { mutableStateOf<String?>(null) }
     var clipError by remember { mutableStateOf("") }
+
+    var undoStack by remember {
+        mutableStateOf(listOf<List<ClipSegment>>())
+    }
+    var redoStack by remember {
+        mutableStateOf(listOf<List<ClipSegment>>())
+    }
 
     val player = remember {
         ExoPlayer.Builder(context).build()
     }
 
-    // Separate reference avoids PlayerView.player name shadowing.
     val previewPlayer = player
+
+    fun saveClipHistory() {
+        undoStack = undoStack + listOf(clips)
+        redoStack = emptyList()
+    }
+
+    fun applyClipChange(updatedClips: List<ClipSegment>) {
+        saveClipHistory()
+        clips = updatedClips
+        clipError = ""
+    }
+
+    fun selectClip(clip: ClipSegment) {
+        selectedClipId = clip.id
+        startInput = formatTime(clip.startMs)
+        endInput = formatTime(clip.endMs)
+        clipError = ""
+    }
 
     val videoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -110,12 +140,16 @@ private fun ClipkaScreen() {
 
             player.setMediaItem(MediaItem.fromUri(uri))
             player.prepare()
-            player.playWhenReady = false
+            player.pause()
 
             isPlaying = false
             positionMs = 0L
             durationMs = 0L
+
             clips = emptyList()
+            selectedClipId = null
+            undoStack = emptyList()
+            redoStack = emptyList()
             clipError = ""
             startInput = "00:00"
             endInput = "00:30"
@@ -207,7 +241,6 @@ private fun ClipkaScreen() {
                                 modifier = Modifier.size(52.dp),
                                 tint = Color(0xFFB7A9FF)
                             )
-
                             Text(
                                 text = "Select a video to preview",
                                 color = Color.White
@@ -218,7 +251,7 @@ private fun ClipkaScreen() {
                             modifier = Modifier.fillMaxSize(),
                             factory = { viewContext ->
                                 PlayerView(viewContext).apply {
-                                    this.player = previewPlayer
+                                    player = previewPlayer
                                     useController = false
                                 }
                             },
@@ -333,11 +366,56 @@ private fun ClipkaScreen() {
             }
 
             Text(
-                text = "Create Clips",
+                text = "Clip Editing",
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        if (undoStack.isNotEmpty()) {
+                            val previous = undoStack.last()
+                            redoStack = redoStack + listOf(clips)
+                            undoStack = undoStack.dropLast(1)
+                            clips = previous
+
+                            if (clips.none { it.id == selectedClipId }) {
+                                selectedClipId = null
+                            }
+                            clipError = ""
+                        }
+                    },
+                    enabled = undoStack.isNotEmpty(),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Undo")
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        if (redoStack.isNotEmpty()) {
+                            val next = redoStack.last()
+                            undoStack = undoStack + listOf(clips)
+                            redoStack = redoStack.dropLast(1)
+                            clips = next
+
+                            if (clips.none { it.id == selectedClipId }) {
+                                selectedClipId = null
+                            }
+                            clipError = ""
+                        }
+                    },
+                    enabled = redoStack.isNotEmpty(),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Redo")
+                }
+            }
 
             Text(
                 text = "Time format: MM:SS or HH:MM:SS",
@@ -390,17 +468,72 @@ private fun ClipkaScreen() {
                         start != null &&
                         end != null
                     ) {
-                        clips = clips + ClipSegment(
+                        val newClip = ClipSegment(
                             name = "Clip ${clips.size + 1}",
                             startMs = start,
                             endMs = end
                         )
+
+                        applyClipChange(clips + newClip)
+                        selectedClipId = newClip.id
                     }
                 },
                 enabled = videoUri != null,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Add Clip")
+            }
+
+            Button(
+                onClick = {
+                    val selected = clips.find {
+                        it.id == selectedClipId
+                    }
+                    val start = parseTime(startInput)
+                    val end = parseTime(endInput)
+
+                    clipError = when {
+                        selected == null ->
+                            "Pehle list se clip select karo."
+
+                        start == null || end == null ->
+                            "Time format sahi nahi."
+
+                        end <= start ->
+                            "End time, start time se aage hona chahiye."
+
+                        end - start > ClipSegment.MAX_CLIP_DURATION_MS ->
+                            "Clip maximum 3 minutes ka ho sakta hai."
+
+                        durationMs > 0L && end > durationMs ->
+                            "End time video duration se zyada hai."
+
+                        else -> ""
+                    }
+
+                    if (
+                        clipError.isEmpty() &&
+                        selected != null &&
+                        start != null &&
+                        end != null
+                    ) {
+                        val updated = selected.copy(
+                            startMs = start,
+                            endMs = end
+                        )
+
+                        applyClipChange(
+                            clips.map {
+                                if (it.id == selected.id) updated else it
+                            }
+                        )
+                        selectedClipId = updated.id
+                    }
+                },
+                enabled = selectedClipId != null,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save Edit")
             }
 
             if (clipError.isNotEmpty()) {
@@ -425,74 +558,110 @@ private fun ClipkaScreen() {
             }
 
             clips.forEach { clip ->
+                val selected = clip.id == selectedClipId
+
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = if (selected) 2.dp else 0.dp,
+                            color = if (selected) {
+                                Color(0xFFB7A9FF)
+                            } else {
+                                Color.Transparent
+                            },
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        .clickable {
+                            selectClip(clip)
+                        },
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1B1C24)
+                        containerColor = if (selected) {
+                            Color(0xFF29253B)
+                        } else {
+                            Color(0xFF1B1C24)
+                        }
                     )
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        Text(
+                            text = clip.name +
+                                if (selected) " • Selected" else "",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "${formatTime(clip.startMs)} - ${formatTime(clip.endMs)}",
+                            color = Color.LightGray
+                        )
+
+                        Text(
+                            text = "Duration: ${formatTime(clip.durationMs)}",
+                            color = Color(0xFFB7A9FF)
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Text(
-                                text = clip.name,
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Text(
-                                text = "${formatTime(clip.startMs)} - ${formatTime(clip.endMs)}",
-                                color = Color.LightGray
-                            )
-
-                            Text(
-                                text = "Duration: ${formatTime(clip.durationMs)}",
-                                color = Color(0xFFB7A9FF)
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                clips = clips.filterNot {
-                                    it.id == clip.id
-                                }
+                            OutlinedButton(
+                                onClick = {
+                                    selectClip(clip)
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Edit")
                             }
-                        ) {
-                            Text("Delete")
+
+                            OutlinedButton(
+                                onClick = {
+                                    applyClipChange(
+                                        clips.filterNot {
+                                            it.id == clip.id
+                                        }
+                                    )
+
+                                    if (selectedClipId == clip.id) {
+                                        selectedClipId = null
+                                        startInput = "00:00"
+                                        endInput = "00:30"
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Delete")
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    player.seekTo(clip.startMs)
+                                    player.play()
+                                },
+                                enabled = videoUri != null,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Preview")
+                            }
                         }
                     }
                 }
             }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1B1C24)
-                )
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "Next features",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text("• Undo / redo")
-                    Text("• Export clips")
-                    Text("• 9:16, 1:1 and 16:9 layouts")
-                    Text("• Face tracking and smart clip suggestions")
-                }
-            }
+            Text(
+                text = "Phase 2: Clip selection, editing, delete, undo and redo.",
+                color = Color.LightGray,
+                fontSize = 12.sp
+            )
+
+            Text(
+                text = "Actual video export is the next phase.",
+                color = Color.LightGray,
+                fontSize = 12.sp
+            )
         }
     }
 }
