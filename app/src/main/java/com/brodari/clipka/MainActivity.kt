@@ -655,43 +655,117 @@ private fun ClipkaScreen() {
                 fontSize = 12.sp
             )
 
+            
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = ClipkaCard
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        text = "VIDEO CONTROLS",
-                        color = ClipkaAccent,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "VIDEO SOURCE",
+                                color = ClipkaAccent,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+
+                            Text(
+                                text = "Import and preview",
+                                color = Color.White,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = "Video source",
+                            tint = ClipkaAccent,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = ClipkaBackground
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FolderOpen,
+                                contentDescription = null,
+                                tint = ClipkaAccent,
+                                modifier = Modifier.size(22.dp)
+                            )
+
+                            Spacer(Modifier.width(10.dp))
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(3.dp)
+                            ) {
+                                Text(
+                                    text = if (videoUri != null) {
+                                        "Selected video"
+                                    } else {
+                                        "No video selected"
+                                    },
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 13.sp
+                                )
+
+                                Text(
+                                    text = videoName,
+                                    color = Color.LightGray,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
 
                     Button(
                         onClick = {
                             videoPicker.launch(arrayOf("video/*"))
                         },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.FolderOpen,
                             contentDescription = null
                         )
-                        Spacer(Modifier.size(8.dp))
-                        Text("Choose video")
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (videoUri == null) {
+                                "Choose video"
+                            } else {
+                                "Change video"
+                            },
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-
-                    Text(
-                        text = videoName,
-                        color = Color.LightGray,
-                        fontSize = 13.sp
-                    )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -717,7 +791,10 @@ private fun ClipkaScreen() {
                                 }
                             },
                             enabled = videoUri != null,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp)
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) {
@@ -727,29 +804,33 @@ private fun ClipkaScreen() {
                                 },
                                 contentDescription = null
                             )
-                            Spacer(Modifier.size(6.dp))
+                            Spacer(Modifier.width(6.dp))
                             Text(if (isPlaying) "Pause" else "Play")
                         }
 
-                        Button(
+                        OutlinedButton(
                             onClick = {
                                 previewingClipId = null
                                 exoPlayer.seekTo(0L)
                                 exoPlayer.pause()
                             },
                             enabled = videoUri != null,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = null
                             )
-                            Spacer(Modifier.size(6.dp))
-                            Text("Restart Original")
+                            Spacer(Modifier.width(6.dp))
+                            Text("Restart")
                         }
                     }
                 }
             }
+
 
             Text(
                 text = "Video Timeline",
