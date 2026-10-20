@@ -504,7 +504,7 @@ Box(
         )
     }
 }
-
+                    } 
 
             Text(
                 text = if (previewClip != null) {
