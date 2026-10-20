@@ -1,12 +1,16 @@
+
 package com.brodari.clipka
 
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import java.io.File
+import java.io.IOException
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -56,7 +60,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.transformer.Composition
+import androidx.media3.transformer.ExportException
+import androidx.media3.transformer.ExportResult
+import androidx.media3.transformer.Transformer
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 
@@ -82,6 +91,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 private fun ClipkaScreen() {
     val context = LocalContext.current
@@ -99,6 +109,11 @@ private fun ClipkaScreen() {
     var clips by remember { mutableStateOf(listOf<ClipSegment>()) }
     var selectedClipId by remember { mutableStateOf<String?>(null) }
     var clipError by remember { mutableStateOf("") }
+
+    var exportStatus by remember { mutableStateOf("") }
+    var isExporting by remember { mutableStateOf(false) }
+    var pendingExportClip by remember { mutableStateOf<ClipSegment?>(null) }
+    var activeTransformer by remember { mutableStateOf<Transformer?>(null) }
 
     var undoStack by remember {
         mutableStateOf(listOf<List<ClipSegment>>())
@@ -148,6 +163,116 @@ private fun ClipkaScreen() {
             startInput = "00:00"
             endInput = "00:30"
             clipError = ""
+            exportStatus = ""
+        }
+    }
+
+    val exportDestinationPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("video/mp4")
+    ) { destinationUri: Uri? ->
+        val clipToExport = pendingExportClip
+        val sourceUri = videoUri
+
+        if (destinationUri == null) {
+            exportStatus = "Export cancelled."
+            pendingExportClip = null
+        } else if (clipToExport == null || sourceUri == null) {
+            exportStatus = "Video ya clip select nahi hui."
+            pendingExportClip = null
+        } else {
+            val outputFile = File(
+                context.cacheDir,
+                "clipka_export_${System.currentTimeMillis()}.mp4"
+            )
+
+            isExporting = true
+            exportStatus = "Clip export ho rahi hai..."
+            exoPlayer.pause()
+            isPlaying = false
+
+            try {
+                val clippedMediaItem = MediaItem.Builder()
+                    .setUri(sourceUri)
+                    .setClippingConfiguration(
+                        MediaItem.ClippingConfiguration.Builder()
+                            .setStartPositionMs(clipToExport.startMs)
+                            .setEndPositionMs(clipToExport.endMs)
+                            .build()
+                    )
+                    .build()
+
+                val transformer = Transformer.Builder(context)
+                    .addListener(object : Transformer.Listener {
+                        override fun onCompleted(
+                            composition: Composition,
+                            exportResult: ExportResult
+                        ) {
+                            Thread {
+                                try {
+                                    val outputStream =
+                                        context.contentResolver
+                                            .openOutputStream(destinationUri)
+                                            ?: throw IOException(
+                                                "Save location open nahi ho saki."
+                                            )
+
+                                    outputStream.use { destination ->
+                                        outputFile.inputStream().use { input ->
+                                            input.copyTo(destination)
+                                        }
+                                    }
+
+                                    outputFile.delete()
+
+                                    Handler(Looper.getMainLooper()).post {
+                                        isExporting = false
+                                        activeTransformer = null
+                                        pendingExportClip = null
+                                        exportStatus =
+                                            "Export complete: ${clipToExport.name}.mp4"
+                                    }
+                                } catch (exception: Exception) {
+                                    outputFile.delete()
+
+                                    Handler(Looper.getMainLooper()).post {
+                                        isExporting = false
+                                        activeTransformer = null
+                                        pendingExportClip = null
+                                        exportStatus =
+                                            "Save failed: ${exception.message ?: "unknown error"}"
+                                    }
+                                }
+                            }.start()
+                        }
+
+                        override fun onError(
+                            composition: Composition,
+                            exportResult: ExportResult,
+                            exportException: ExportException
+                        ) {
+                            outputFile.delete()
+                            isExporting = false
+                            activeTransformer = null
+                            pendingExportClip = null
+                            exportStatus =
+                                "Export failed: ${exportException.message ?: "unsupported video"}"
+                        }
+                    })
+                    .build()
+
+                activeTransformer = transformer
+                transformer.start(
+                    clippedMediaItem,
+                    outputFile.absolutePath
+                )
+            } catch (exception: Exception) {
+                outputFile.delete()
+                isExporting = false
+                activeTransformer = null
+                pendingExportClip = null
+                exportStatus =
+                    "Export start nahi hua: ${exception.message ?: "unknown error"}"
+            }
         }
     }
 
@@ -358,6 +483,45 @@ private fun ClipkaScreen() {
                 Text(formatTime(durationMs), color = Color.LightGray)
             }
 
+            Button(
+                onClick = {
+                    val clip = clips.firstOrNull {
+                        it.id == selectedClipId
+                    }
+
+                    if (clip != null && videoUri != null && !isExporting) {
+                        pendingExportClip = clip
+                        exportDestinationPicker.launch(
+                            "${clip.name.replace(Regex("[^A-Za-z0-9_-]"), "_")}.mp4"
+                        )
+                    }
+                },
+                enabled = videoUri != null &&
+                    selectedClipId != null &&
+                    !isExporting,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    if (isExporting) {
+                        "Exporting MP4..."
+                    } else {
+                        "Export Selected Clip (MP4)"
+                    }
+                )
+            }
+
+            if (exportStatus.isNotEmpty()) {
+                Text(
+                    text = exportStatus,
+                    color = if (exportStatus.startsWith("Export complete")) {
+                        ClipkaAccent
+                    } else {
+                        Color.LightGray
+                    },
+                    fontSize = 13.sp
+                )
+            }
+
             Text(
                 text = "Clip Editing",
                 color = Color.White,
@@ -378,10 +542,7 @@ private fun ClipkaScreen() {
                             undoStack = undoStack.dropLast(1)
                             clips = previousClips
 
-                            if (clips.none { segment ->
-                                    segment.id == selectedClipId
-                                }
-                            ) {
+                            if (clips.none { it.id == selectedClipId }) {
                                 selectedClipId = null
                             }
 
@@ -403,10 +564,7 @@ private fun ClipkaScreen() {
                             redoStack = redoStack.dropLast(1)
                             clips = nextClips
 
-                            if (clips.none { segment ->
-                                    segment.id == selectedClipId
-                                }
-                            ) {
+                            if (clips.none { it.id == selectedClipId }) {
                                 selectedClipId = null
                             }
 
@@ -477,8 +635,8 @@ private fun ClipkaScreen() {
 
             Button(
                 onClick = {
-                    val selectedSegment = clips.firstOrNull { segment ->
-                        segment.id == selectedClipId
+                    val selectedSegment = clips.firstOrNull {
+                        it.id == selectedClipId
                     }
 
                     val startTime = parseTime(startInput)
@@ -643,13 +801,13 @@ private fun ClipkaScreen() {
             }
 
             Text(
-                text = "Phase 2: clip selection, editing, delete, undo and redo.",
+                text = "Phase 3: selected clip MP4 export.",
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
 
             Text(
-                text = "MP4 export and aspect-ratio rendering are not included in this phase.",
+                text = "Aspect ratios, captions and batch export are later phases.",
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
