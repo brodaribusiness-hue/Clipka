@@ -72,6 +72,7 @@ import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.compose.material3.Divider
 import kotlinx.coroutines.delay
 
 private val ClipkaAccent = Color(0xFFB7A9FF)
@@ -1017,6 +1018,42 @@ private fun ClipkaScreen() {
                 }
             }
 
+            val frameEditorClip = clips.firstOrNull {
+    it.id == selectedClipId
+}
+
+if (frameEditorClip != null) {
+    Divider(
+        color = Color(0xFF393544),
+        thickness = 1.dp
+    )
+
+    FrameEditor(
+        clip = frameEditorClip,
+        onFramesChange = { updatedFrames ->
+            applyClipChange(
+                clips.map { item ->
+                    if (item.id == frameEditorClip.id) {
+                        item.copy(frames = updatedFrames)
+                    } else {
+                        item
+                    }
+                }
+            )
+        },
+        onLayoutChange = { updatedLayout ->
+            applyClipChange(
+                clips.map { item ->
+                    if (item.id == frameEditorClip.id) {
+                        item.copy(frameLayout = updatedLayout)
+                    } else {
+                        item
+                    }
+                }
+            )
+        }
+    )
+}
             Text(
                 text = "Each clip exports with its own selected aspect ratio.",
                 color = Color.LightGray,
