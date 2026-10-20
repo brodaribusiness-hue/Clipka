@@ -1,5 +1,3 @@
-File path: "app/src/main/java/com/brodari/clipka/MainActivity.kt"
-
 package com.brodari.clipka
 
 import android.net.Uri
