@@ -62,6 +62,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 
+private val ClipkaAccent = Color(0xFFB7A9FF)
+private val ClipkaBackground = Color(0xFF101116)
+private val ClipkaCard = Color(0xFF1B1C24)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,8 +74,8 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(
                 colorScheme = darkColorScheme(
                     primary = Color(0xFF9B8CFF),
-                    background = Color(0xFF101116),
-                    surface = Color(0xFF1B1C24)
+                    background = ClipkaBackground,
+                    surface = ClipkaCard
                 )
             ) {
                 ClipkaScreen()
@@ -105,87 +109,80 @@ private fun ClipkaScreen() {
         mutableStateOf(listOf<List<ClipSegment>>())
     }
 
-    val player = remember {
+    val exoPlayer = remember {
         ExoPlayer.Builder(context).build()
     }
 
-    val previewPlayer = player
-
-    fun saveClipHistory() {
+    fun applyClipChange(updatedClips: List<ClipSegment>) {
         undoStack = undoStack + listOf(clips)
         redoStack = emptyList()
-    }
-
-    fun applyClipChange(updatedClips: List<ClipSegment>) {
-        saveClipHistory()
         clips = updatedClips
         clipError = ""
     }
 
-    fun selectClip(clip: ClipSegment) {
-        selectedClipId = clip.id
-        startInput = formatTime(clip.startMs)
-        endInput = formatTime(clip.endMs)
+    fun selectClip(segment: ClipSegment) {
+        selectedClipId = segment.id
+        startInput = formatTime(segment.startMs)
+        endInput = formatTime(segment.endMs)
         clipError = ""
     }
 
     val videoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            videoUri = uri
-            videoName = uri.lastPathSegment
+    ) { selectedUri: Uri? ->
+        if (selectedUri != null) {
+            videoUri = selectedUri
+            videoName = selectedUri.lastPathSegment
                 ?.substringAfterLast('/')
                 ?: "Selected video"
 
-            player.setMediaItem(MediaItem.fromUri(uri))
-            player.prepare()
-            player.pause()
+            exoPlayer.setMediaItem(MediaItem.fromUri(selectedUri))
+            exoPlayer.prepare()
+            exoPlayer.pause()
 
             isPlaying = false
             positionMs = 0L
             durationMs = 0L
-
             clips = emptyList()
             selectedClipId = null
             undoStack = emptyList()
             redoStack = emptyList()
-            clipError = ""
             startInput = "00:00"
             endInput = "00:30"
+            clipError = ""
         }
     }
 
-    DisposableEffect(player) {
+    DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
             }
 
-            override fun onPlaybackStateChanged(state: Int) {
-                val duration = player.duration
-                if (duration > 0L) {
-                    durationMs = duration
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                val actualDuration = exoPlayer.duration
+                if (actualDuration > 0L) {
+                    durationMs = actualDuration
                 }
             }
         }
 
-        player.addListener(listener)
+        exoPlayer.addListener(listener)
 
         onDispose {
-            player.removeListener(listener)
-            player.release()
+            exoPlayer.removeListener(listener)
+            exoPlayer.release()
         }
     }
 
-    LaunchedEffect(player) {
+    LaunchedEffect(exoPlayer) {
         while (true) {
             if (!isSeeking) {
-                positionMs = player.currentPosition.coerceAtLeast(0L)
+                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
 
-                val duration = player.duration
-                if (duration > 0L) {
-                    durationMs = duration
+                val actualDuration = exoPlayer.duration
+                if (actualDuration > 0L) {
+                    durationMs = actualDuration
                 }
             }
             delay(300L)
@@ -194,20 +191,20 @@ private fun ClipkaScreen() {
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFF101116)
+        color = ClipkaBackground
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
                 text = "clipka",
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFB7A9FF)
+                color = ClipkaAccent
             )
 
             Text(
@@ -217,20 +214,19 @@ private fun ClipkaScreen() {
             )
 
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(230.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1B1C24)
+                    containerColor = Color.Black
                 ),
                 shape = RoundedCornerShape(18.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(230.dp)
-                        .background(Color.Black),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (videoUri == null) {
+                if (videoUri == null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -239,27 +235,27 @@ private fun ClipkaScreen() {
                                 imageVector = Icons.Default.PlayArrow,
                                 contentDescription = null,
                                 modifier = Modifier.size(52.dp),
-                                tint = Color(0xFFB7A9FF)
+                                tint = ClipkaAccent
                             )
                             Text(
                                 text = "Select a video to preview",
                                 color = Color.White
                             )
                         }
-                    } else {
-                        AndroidView(
-                            modifier = Modifier.fillMaxSize(),
-                            factory = { viewContext ->
-                                PlayerView(viewContext).apply {
-                                    player = previewPlayer
-                                    useController = false
-                                }
-                            },
-                            update = { view ->
-                                view.player = previewPlayer
-                            }
-                        )
                     }
+                } else {
+                    AndroidView(
+                        modifier = Modifier.fillMaxSize(),
+                        factory = { viewContext ->
+                            PlayerView(viewContext).apply {
+                                this.player = exoPlayer
+                                useController = false
+                            }
+                        },
+                        update = { playerView ->
+                            playerView.player = exoPlayer
+                        }
+                    )
                 }
             }
 
@@ -285,14 +281,14 @@ private fun ClipkaScreen() {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Button(
                     onClick = {
-                        if (player.isPlaying) {
-                            player.pause()
+                        if (exoPlayer.isPlaying) {
+                            exoPlayer.pause()
                         } else if (videoUri != null) {
-                            player.play()
+                            exoPlayer.play()
                         }
                     },
                     enabled = videoUri != null,
@@ -312,8 +308,8 @@ private fun ClipkaScreen() {
 
                 Button(
                     onClick = {
-                        player.seekTo(0L)
-                        player.pause()
+                        exoPlayer.seekTo(0L)
+                        exoPlayer.pause()
                     },
                     enabled = videoUri != null,
                     modifier = Modifier.weight(1f)
@@ -328,27 +324,26 @@ private fun ClipkaScreen() {
             }
 
             Text(
-                text = "Video timeline",
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                text = "Video Timeline",
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
             )
 
             Slider(
                 value = if (isSeeking) {
                     seekValue
                 } else if (durationMs > 0L) {
-                    (positionMs.toFloat() / durationMs)
-                        .coerceIn(0f, 1f)
+                    (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
                 } else {
                     0f
                 },
-                onValueChange = { value ->
+                onValueChange = { newValue ->
                     isSeeking = true
-                    seekValue = value
+                    seekValue = newValue
                 },
                 onValueChangeFinished = {
                     if (durationMs > 0L) {
-                        player.seekTo(
+                        exoPlayer.seekTo(
                             (seekValue * durationMs).toLong()
                         )
                     }
@@ -379,14 +374,19 @@ private fun ClipkaScreen() {
                 OutlinedButton(
                     onClick = {
                         if (undoStack.isNotEmpty()) {
-                            val previous = undoStack.last()
+                            val previousClips = undoStack.last()
+
                             redoStack = redoStack + listOf(clips)
                             undoStack = undoStack.dropLast(1)
-                            clips = previous
+                            clips = previousClips
 
-                            if (clips.none { it.id == selectedClipId }) {
+                            if (clips.none { segment ->
+                                    segment.id == selectedClipId
+                                }
+                            ) {
                                 selectedClipId = null
                             }
+
                             clipError = ""
                         }
                     },
@@ -399,14 +399,19 @@ private fun ClipkaScreen() {
                 OutlinedButton(
                     onClick = {
                         if (redoStack.isNotEmpty()) {
-                            val next = redoStack.last()
+                            val nextClips = redoStack.last()
+
                             undoStack = undoStack + listOf(clips)
                             redoStack = redoStack.dropLast(1)
-                            clips = next
+                            clips = nextClips
 
-                            if (clips.none { it.id == selectedClipId }) {
+                            if (clips.none { segment ->
+                                    segment.id == selectedClipId
+                                }
+                            ) {
                                 selectedClipId = null
                             }
+
                             clipError = ""
                         }
                     },
@@ -441,41 +446,29 @@ private fun ClipkaScreen() {
 
             Button(
                 onClick = {
-                    val start = parseTime(startInput)
-                    val end = parseTime(endInput)
+                    val startTime = parseTime(startInput)
+                    val endTime = parseTime(endInput)
 
-                    clipError = when {
-                        videoUri == null ->
-                            "Pehle video select karo."
-
-                        start == null || end == null ->
-                            "Time format sahi nahi. Example: 01:25"
-
-                        end <= start ->
-                            "End time, start time se aage hona chahiye."
-
-                        end - start > ClipSegment.MAX_CLIP_DURATION_MS ->
-                            "Clip maximum 3 minutes ka ho sakta hai."
-
-                        durationMs > 0L && end > durationMs ->
-                            "End time video duration se zyada hai."
-
-                        else -> ""
-                    }
+                    clipError = validateClipTimes(
+                        startMs = startTime,
+                        endMs = endTime,
+                        videoDurationMs = durationMs,
+                        videoMissing = videoUri == null
+                    )
 
                     if (
                         clipError.isEmpty() &&
-                        start != null &&
-                        end != null
+                        startTime != null &&
+                        endTime != null
                     ) {
-                        val newClip = ClipSegment(
+                        val newSegment = ClipSegment(
                             name = "Clip ${clips.size + 1}",
-                            startMs = start,
-                            endMs = end
+                            startMs = startTime,
+                            endMs = endTime
                         )
 
-                        applyClipChange(clips + newClip)
-                        selectedClipId = newClip.id
+                        applyClipChange(clips + newSegment)
+                        selectedClipId = newSegment.id
                     }
                 },
                 enabled = videoUri != null,
@@ -486,48 +479,47 @@ private fun ClipkaScreen() {
 
             Button(
                 onClick = {
-                    val selected = clips.find {
-                        it.id == selectedClipId
+                    val selectedSegment = clips.firstOrNull { segment ->
+                        segment.id == selectedClipId
                     }
-                    val start = parseTime(startInput)
-                    val end = parseTime(endInput)
+
+                    val startTime = parseTime(startInput)
+                    val endTime = parseTime(endInput)
 
                     clipError = when {
-                        selected == null ->
+                        selectedSegment == null ->
                             "Pehle list se clip select karo."
 
-                        start == null || end == null ->
-                            "Time format sahi nahi."
-
-                        end <= start ->
-                            "End time, start time se aage hona chahiye."
-
-                        end - start > ClipSegment.MAX_CLIP_DURATION_MS ->
-                            "Clip maximum 3 minutes ka ho sakta hai."
-
-                        durationMs > 0L && end > durationMs ->
-                            "End time video duration se zyada hai."
-
-                        else -> ""
+                        else -> validateClipTimes(
+                            startMs = startTime,
+                            endMs = endTime,
+                            videoDurationMs = durationMs,
+                            videoMissing = videoUri == null
+                        )
                     }
 
                     if (
                         clipError.isEmpty() &&
-                        selected != null &&
-                        start != null &&
-                        end != null
+                        selectedSegment != null &&
+                        startTime != null &&
+                        endTime != null
                     ) {
-                        val updated = selected.copy(
-                            startMs = start,
-                            endMs = end
+                        val updatedSegment = selectedSegment.copy(
+                            startMs = startTime,
+                            endMs = endTime
                         )
 
                         applyClipChange(
-                            clips.map {
-                                if (it.id == selected.id) updated else it
+                            clips.map { segment ->
+                                if (segment.id == updatedSegment.id) {
+                                    updatedSegment
+                                } else {
+                                    segment
+                                }
                             }
                         )
-                        selectedClipId = updated.id
+
+                        selectedClipId = updatedSegment.id
                     }
                 },
                 enabled = selectedClipId != null,
@@ -557,29 +549,29 @@ private fun ClipkaScreen() {
                 )
             }
 
-            clips.forEach { clip ->
-                val selected = clip.id == selectedClipId
+            clips.forEach { segment ->
+                val isSelected = segment.id == selectedClipId
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(
-                            width = if (selected) 2.dp else 0.dp,
-                            color = if (selected) {
-                                Color(0xFFB7A9FF)
+                            width = if (isSelected) 2.dp else 0.dp,
+                            color = if (isSelected) {
+                                ClipkaAccent
                             } else {
                                 Color.Transparent
                             },
                             shape = RoundedCornerShape(14.dp)
                         )
                         .clickable {
-                            selectClip(clip)
+                            selectClip(segment)
                         },
                     colors = CardDefaults.cardColors(
-                        containerColor = if (selected) {
+                        containerColor = if (isSelected) {
                             Color(0xFF29253B)
                         } else {
-                            Color(0xFF1B1C24)
+                            ClipkaCard
                         }
                     )
                 ) {
@@ -588,20 +580,21 @@ private fun ClipkaScreen() {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text = clip.name +
-                                if (selected) " • Selected" else "",
+                            text = segment.name +
+                                if (isSelected) " • Selected" else "",
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
 
                         Text(
-                            text = "${formatTime(clip.startMs)} - ${formatTime(clip.endMs)}",
+                            text = "${formatTime(segment.startMs)} - " +
+                                formatTime(segment.endMs),
                             color = Color.LightGray
                         )
 
                         Text(
-                            text = "Duration: ${formatTime(clip.durationMs)}",
-                            color = Color(0xFFB7A9FF)
+                            text = "Duration: ${formatTime(segment.durationMs)}",
+                            color = ClipkaAccent
                         )
 
                         Row(
@@ -610,7 +603,7 @@ private fun ClipkaScreen() {
                         ) {
                             OutlinedButton(
                                 onClick = {
-                                    selectClip(clip)
+                                    selectClip(segment)
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -620,12 +613,12 @@ private fun ClipkaScreen() {
                             OutlinedButton(
                                 onClick = {
                                     applyClipChange(
-                                        clips.filterNot {
-                                            it.id == clip.id
+                                        clips.filterNot { item ->
+                                            item.id == segment.id
                                         }
                                     )
 
-                                    if (selectedClipId == clip.id) {
+                                    if (selectedClipId == segment.id) {
                                         selectedClipId = null
                                         startInput = "00:00"
                                         endInput = "00:30"
@@ -638,8 +631,8 @@ private fun ClipkaScreen() {
 
                             OutlinedButton(
                                 onClick = {
-                                    player.seekTo(clip.startMs)
-                                    player.play()
+                                    exoPlayer.seekTo(segment.startMs)
+                                    exoPlayer.play()
                                 },
                                 enabled = videoUri != null,
                                 modifier = Modifier.weight(1f)
@@ -652,13 +645,13 @@ private fun ClipkaScreen() {
             }
 
             Text(
-                text = "Phase 2: Clip selection, editing, delete, undo and redo.",
+                text = "Phase 2: clip selection, editing, delete, undo and redo.",
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
 
             Text(
-                text = "Actual video export is the next phase.",
+                text = "MP4 export and aspect-ratio rendering are not included in this phase.",
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
@@ -666,8 +659,38 @@ private fun ClipkaScreen() {
     }
 }
 
+private fun validateClipTimes(
+    startMs: Long?,
+    endMs: Long?,
+    videoDurationMs: Long,
+    videoMissing: Boolean
+): String {
+    return when {
+        videoMissing ->
+            "Pehle video select karo."
+
+        startMs == null || endMs == null ->
+            "Time format sahi nahi. Example: 01:25"
+
+        startMs < 0L ->
+            "Start time negative nahi ho sakta."
+
+        endMs <= startMs ->
+            "End time, start time se aage hona chahiye."
+
+        endMs - startMs > ClipSegment.MAX_CLIP_DURATION_MS ->
+            "Clip maximum 3 minutes ka ho sakta hai."
+
+        videoDurationMs > 0L && endMs > videoDurationMs ->
+            "End time video duration se zyada hai."
+
+        else -> ""
+    }
+}
+
 private fun parseTime(value: String): Long? {
     val parts = value.trim().split(":")
+
     if (parts.size !in 2..3) return null
 
     val numbers = parts.map { part ->
