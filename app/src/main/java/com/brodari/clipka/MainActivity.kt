@@ -1396,26 +1396,44 @@ private fun ClipkaScreen() {
             }
 
 
-            if (clipError.isNotEmpty()) {
-                Text(
-                    text = clipError,
-                    color = Color(0xFFFF7777)
-                )
-            }
-
+            
             Text(
-                text = "My Clips (${clips.size})",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                text = "MY CLIPS  •  ${clips.size}",
+                color = ClipkaAccent,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp
             )
 
             if (clips.isEmpty()) {
-                Text(
-                    text = "Abhi koi clip add nahi hui.",
-                    color = Color.LightGray
-                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = ClipkaCard
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "No clips yet",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Text(
+                            text = "Video select karo, start aur end time set karo, phir Add Clip dabao.",
+                            color = Color.LightGray,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
+
 
             clips.forEach { segment ->
                 val isSelected = segment.id == selectedClipId
