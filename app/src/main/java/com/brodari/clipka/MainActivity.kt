@@ -549,16 +549,56 @@ private fun ClipkaScreen() {
                 }
             }
 
-            Text(
-                text = if (previewClip != null) {
-                    "CLIP PREVIEW  •  ${previewClip.aspectRatio}"
-                } else {
-                    "VIDEO PREVIEW"
-                },
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
+                        Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = if (previewClip != null) {
+                            "CLIP PREVIEW"
+                        } else {
+                            "VIDEO PREVIEW"
+                        },
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+
+                    Text(
+                        text = if (previewClip != null) {
+                            "${previewClip.aspectRatio} • ${previewClip.name}"
+                        } else {
+                            "Select a clip to preview its framing"
+                        },
+                        color = Color.LightGray,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF353044)
+                ) {
+                    Text(
+                        text = if (previewClip != null) {
+                            previewClip.aspectRatio
+                        } else {
+                            "ORIGINAL"
+                        },
+                        modifier = Modifier.padding(
+                            horizontal = 10.dp,
+                            vertical = 7.dp
+                        ),
+                        color = ClipkaAccent,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
 
             BoxWithConstraints(
