@@ -1033,6 +1033,77 @@ if (frameEditorClip != null) {
         thickness = 1.dp
     )
 
+    
+    Button(
+        onClick = {
+            val sourceUri = videoUri
+            val clip = frameEditorClip
+
+            if (sourceUri == null) {
+                faceDetectionStatus = "Pehle video select karo."
+            } else if (!isDetectingFaces) {
+                isDetectingFaces = true
+                faceDetectionStatus = "Faces detect ho rahe hain..."
+
+                faceDetectionScope.launch {
+                    try {
+                        val detectedFrames =
+                            ClipkaFaceDetection.detectFaces(
+                                context = context,
+                                videoUri = sourceUri,
+                                startMs = clip.startMs,
+                                endMs = clip.endMs
+                            )
+
+                        if (detectedFrames.isEmpty()) {
+                            faceDetectionStatus =
+                                "Koi face nahi mila. Doosra clip try karo."
+                        } else {
+                            applyClipChange(
+                                clips.map { item ->
+                                    if (item.id == clip.id) {
+                                        item.copy(
+                                            frames = detectedFrames,
+                                            frameLayout = "SINGLE"
+                                        )
+                                    } else {
+                                        item
+                                    }
+                                }
+                            )
+
+                            faceDetectionStatus =
+                                "${detectedFrames.size} face(s) detected."
+                        }
+                    } catch (error: Exception) {
+                        faceDetectionStatus =
+                            "Detection failed: ${error.message ?: "unknown error"}"
+                    } finally {
+                        isDetectingFaces = false
+                    }
+                }
+            }
+        },
+        enabled = !isDetectingFaces && videoUri != null,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            if (isDetectingFaces) {
+                "Detecting Faces..."
+            } else {
+                "Detect Faces"
+            }
+        )
+    }
+
+    if (faceDetectionStatus.isNotEmpty()) {
+        Text(
+            text = faceDetectionStatus,
+            color = ClipkaAccent,
+            fontSize = 13.sp
+        )
+    }
+
     FrameEditor(
         clip = frameEditorClip,
         onFramesChange = { updatedFrames ->
