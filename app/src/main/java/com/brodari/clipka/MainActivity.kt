@@ -955,51 +955,60 @@ private fun ClipkaScreen() {
                         enabled = videoUri != null && durationMs > 0L
                     )
 
-                    Row(
+                                        Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF15161D)
                         ) {
-                            Text(
-                                text = "CURRENT",
-                                color = Color.LightGray,
-                                fontSize = 10.sp,
-                                letterSpacing = 1.sp
-                            )
-
-                            Text(
-                                text = formatTime(
-                                    if (isSeeking && durationMs > 0L) {
-                                        (seekValue * durationMs).toLong()
-                                    } else {
-                                        positionMs
-                                    }
+                            Column(
+                                modifier = Modifier.padding(
+                                    horizontal = 14.dp,
+                                    vertical = 10.dp
                                 ),
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "CURRENT POSITION",
+                                    color = Color.LightGray,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    text = formatTime(
+                                        if (isSeeking && durationMs > 0L) {
+                                            (seekValue * durationMs).toLong()
+                                        } else {
+                                            positionMs
+                                        }
+                                    ),
+                                    color = ClipkaAccent,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
                         Column(
                             horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = "DURATION",
+                                text = "TOTAL DURATION",
                                 color = Color.LightGray,
                                 fontSize = 10.sp,
-                                letterSpacing = 1.sp
+                                fontWeight = FontWeight.Bold
                             )
 
                             Text(
                                 text = formatTime(durationMs),
                                 color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
