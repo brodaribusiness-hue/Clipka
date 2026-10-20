@@ -64,6 +64,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Presentation
+import androidx.media3.effect.Crop
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
@@ -246,15 +247,50 @@ val faceDetectionScope = rememberCoroutineScope()
                     else -> 9f / 16f
                 }
 
-                // Crop the video to fill the selected aspect ratio.
+                
+                // Step 2: Selected aspect ratio aur custom frame.
+                val targetAspectRatio = when (clipToExport.aspectRatio) {
+                    "9:16" -> 9f / 16f
+                    "1:1" -> 1f
+                    "16:9" -> 16f / 9f
+                    else -> 9f / 16f
+                }
+
                 val presentationEffect = Presentation.createForAspectRatio(
                     targetAspectRatio,
                     Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
                 )
 
-                // Step 3: Video effect ko export pipeline mein apply karo.
+                val selectedFrame = clipToExport.frames.firstOrNull()
+                val videoEffects = if (
+                    clipToExport.frameLayout == "SINGLE" &&
+                    selectedFrame != null
+                ) {
+                    val left = -1f + 2f * selectedFrame.x
+                    val right = -1f + 2f *
+                        (selectedFrame.x + selectedFrame.width)
+                    val top = 1f - 2f * selectedFrame.y
+                    val bottom = 1f - 2f *
+                        (selectedFrame.y + selectedFrame.height)
+
+                    listOf(
+                        Crop(left, right, bottom, top),
+                        presentationEffect
+                    )
+                } else {
+                    listOf(presentationEffect)
+                }
+
+                // Step 3: Effects ko export item par apply karo.
                 val editedMediaItem = EditedMediaItem.Builder(clippedMediaItem)
                     .setEffects(
+                        Effects(
+                            emptyList(),
+                            videoEffects
+                        )
+                    )
+                    .build()
+
                         Effects(
                             emptyList(),
                             listOf(presentationEffect)
