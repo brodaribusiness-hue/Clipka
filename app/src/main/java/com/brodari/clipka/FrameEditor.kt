@@ -20,12 +20,18 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 private val FrameEditorAccent = Color(0xFFB7A9FF)
+private val FrameEditorGreen = Color(0xFF70D6B5)
+private val FrameEditorOrange = Color(0xFFFFB86B)
 
 @Composable
 fun FrameEditor(
@@ -43,8 +49,8 @@ fun FrameEditor(
         )
 
         Text(
-            text = "Adjust each frame's position and size. " +
-                "Each clip keeps its own framing settings.",
+            text = "Adjust frame position and size. " +
+                "Changes are applied when you finish moving a slider.",
             color = Color.LightGray
         )
 
@@ -91,7 +97,7 @@ fun FrameEditor(
         }
 
         Text(
-            text = "Frame preview (source-video coordinates)",
+            text = "Frame layout preview",
             color = Color.White
         )
 
@@ -106,7 +112,6 @@ fun FrameEditor(
                 )
                 .padding(8.dp)
         ) {
-            // Capture the width here so nested Box scopes can use it.
             val previewWidth = maxWidth
             val previewHeight = 224.dp
 
@@ -118,8 +123,8 @@ fun FrameEditor(
                 clip.frames.forEachIndexed { index, frame ->
                     val frameColor = when (index % 3) {
                         0 -> FrameEditorAccent
-                        1 -> Color(0xFF70D6B5)
-                        else -> Color(0xFFFFB86B)
+                        1 -> FrameEditorGreen
+                        else -> FrameEditorOrange
                     }
 
                     Box(
@@ -190,122 +195,176 @@ fun FrameEditor(
             clip.frameLayout == "SPLIT_HORIZONTAL"
         ) {
             Text(
-                text = "Split layouts require at least 2 frames.",
+                text = if (clip.frames.size < 2) {
+                    "Add at least 2 frames to use a split layout."
+                } else {
+                    "Split layout selected. Export integration is handled separately."
+                },
                 color = FrameEditorAccent
             )
         }
 
         clip.frames.forEachIndexed { index, frame ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF1B1C24)
-                )
+            FrameControls(
+                clip = clip,
+                frame = frame,
+                index = index,
+                onFramesChange = onFramesChange
+            )
+        }
+    }
+}
+
+@Composable
+private fun FrameControls(
+    clip: ClipSegment,
+    frame: FrameRegion,
+    index: Int,
+    onFramesChange: (List<FrameRegion>) -> Unit
+) {
+    var draftX by remember(clip.id, frame.id, frame.x) {
+        mutableFloatStateOf(frame.x)
+    }
+    var draftY by remember(clip.id, frame.id, frame.y) {
+        mutableFloatStateOf(frame.y)
+    }
+    var draftWidth by remember(clip.id, frame.id, frame.width) {
+        mutableFloatStateOf(frame.width)
+    }
+    var draftHeight by remember(clip.id, frame.id, frame.height) {
+        mutableFloatStateOf(frame.height)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1B1C24)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "${frame.name} — Frame ${index + 1}",
+                color = Color.White
+            )
+
+            Text(
+                text = "Horizontal position: ${"%.2f".format(draftX)}",
+                color = Color.LightGray
+            )
+
+            Slider(
+                value = draftX,
+                onValueChange = { value ->
+                    draftX = value.coerceIn(
+                        0f,
+                        (1f - draftWidth).coerceAtLeast(0f)
+                    )
+                },
+                onValueChangeFinished = {
+                    commitFrameChange(
+                        clip,
+                        frame,
+                        frame.copy(x = draftX),
+                        onFramesChange
+                    )
+                },
+                valueRange = 0f..(1f - draftWidth).coerceAtLeast(0f)
+            )
+
+            Text(
+                text = "Vertical position: ${"%.2f".format(draftY)}",
+                color = Color.LightGray
+            )
+
+            Slider(
+                value = draftY,
+                onValueChange = { value ->
+                    draftY = value.coerceIn(
+                        0f,
+                        (1f - draftHeight).coerceAtLeast(0f)
+                    )
+                },
+                onValueChangeFinished = {
+                    commitFrameChange(
+                        clip,
+                        frame,
+                        frame.copy(y = draftY),
+                        onFramesChange
+                    )
+                },
+                valueRange = 0f..(1f - draftHeight).coerceAtLeast(0f)
+            )
+
+            Text(
+                text = "Frame width: ${"%.2f".format(draftWidth)}",
+                color = Color.LightGray
+            )
+
+            Slider(
+                value = draftWidth,
+                onValueChange = { value ->
+                    draftWidth = value.coerceIn(
+                        0.10f,
+                        (1f - draftX).coerceAtLeast(0.10f)
+                    )
+                },
+                onValueChangeFinished = {
+                    commitFrameChange(
+                        clip,
+                        frame,
+                        frame.copy(
+                            x = draftX,
+                            width = draftWidth,
+                            y = draftY,
+                            height = draftHeight
+                        ),
+                        onFramesChange
+                    )
+                },
+                valueRange = 0.10f..(1f - draftX).coerceAtLeast(0.10f)
+            )
+
+            Text(
+                text = "Frame height: ${"%.2f".format(draftHeight)}",
+                color = Color.LightGray
+            )
+
+            Slider(
+                value = draftHeight,
+                onValueChange = { value ->
+                    draftHeight = value.coerceIn(
+                        0.10f,
+                        (1f - draftY).coerceAtLeast(0.10f)
+                    )
+                },
+                onValueChangeFinished = {
+                    commitFrameChange(
+                        clip,
+                        frame,
+                        frame.copy(
+                            x = draftX,
+                            y = draftY,
+                            width = draftWidth,
+                            height = draftHeight
+                        ),
+                        onFramesChange
+                    )
+                },
+                valueRange = 0.10f..(1f - draftY).coerceAtLeast(0.10f)
+            )
+
+            OutlinedButton(
+                onClick = {
+                    onFramesChange(
+                        clip.frames.filterNot { it.id == frame.id }
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = "${frame.name} — Frame ${index + 1}",
-                        color = Color.White
-                    )
-
-                    Text("Horizontal position", color = Color.LightGray)
-
-                    Slider(
-                        value = frame.x,
-                        onValueChange = { value ->
-                            updateFrame(
-                                clip,
-                                frame,
-                                frame.copy(
-                                    x = value.coerceIn(
-                                        0f,
-                                        (1f - frame.width).coerceAtLeast(0f)
-                                    )
-                                ),
-                                onFramesChange
-                            )
-                        },
-                        valueRange = 0f..(1f - frame.width)
-                            .coerceAtLeast(0f)
-                    )
-
-                    Text("Vertical position", color = Color.LightGray)
-
-                    Slider(
-                        value = frame.y,
-                        onValueChange = { value ->
-                            updateFrame(
-                                clip,
-                                frame,
-                                frame.copy(
-                                    y = value.coerceIn(
-                                        0f,
-                                        (1f - frame.height).coerceAtLeast(0f)
-                                    )
-                                ),
-                                onFramesChange
-                            )
-                        },
-                        valueRange = 0f..(1f - frame.height)
-                            .coerceAtLeast(0f)
-                    )
-
-                    Text("Frame width", color = Color.LightGray)
-
-                    Slider(
-                        value = frame.width,
-                        onValueChange = { value ->
-                            val newWidth = value.coerceIn(
-                                0.10f,
-                                (1f - frame.x).coerceAtLeast(0.10f)
-                            )
-
-                            updateFrame(
-                                clip,
-                                frame,
-                                frame.copy(width = newWidth),
-                                onFramesChange
-                            )
-                        },
-                        valueRange = 0.10f..(1f - frame.x)
-                            .coerceAtLeast(0.10f)
-                    )
-
-                    Text("Frame height", color = Color.LightGray)
-
-                    Slider(
-                        value = frame.height,
-                        onValueChange = { value ->
-                            val newHeight = value.coerceIn(
-                                0.10f,
-                                (1f - frame.y).coerceAtLeast(0.10f)
-                            )
-
-                            updateFrame(
-                                clip,
-                                frame,
-                                frame.copy(height = newHeight),
-                                onFramesChange
-                            )
-                        },
-                        valueRange = 0.10f..(1f - frame.y)
-                            .coerceAtLeast(0.10f)
-                    )
-
-                    OutlinedButton(
-                        onClick = {
-                            onFramesChange(
-                                clip.frames.filterNot { it.id == frame.id }
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Remove ${frame.name}")
-                    }
-                }
+                Text("Remove ${frame.name}")
             }
         }
     }
@@ -338,12 +397,14 @@ private fun LayoutButton(
     }
 }
 
-private fun updateFrame(
+private fun commitFrameChange(
     clip: ClipSegment,
     oldFrame: FrameRegion,
     newFrame: FrameRegion,
     onFramesChange: (List<FrameRegion>) -> Unit
 ) {
+    if (oldFrame == newFrame) return
+
     onFramesChange(
         clip.frames.map { frame ->
             if (frame.id == oldFrame.id) newFrame else frame
