@@ -832,43 +832,139 @@ private fun ClipkaScreen() {
             }
 
 
-            Text(
-                text = "Video Timeline",
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold
-            )
-
-            Slider(
-                value = if (isSeeking) {
-                    seekValue
-                } else if (durationMs > 0L) {
-                    (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
-                } else {
-                    0f
-                },
-                onValueChange = { newValue ->
-                    isSeeking = true
-                    seekValue = newValue
-                },
-                onValueChangeFinished = {
-                    previewingClipId = null
-                    if (durationMs > 0L) {
-                        exoPlayer.seekTo(
-                            (seekValue * durationMs).toLong()
-                        )
-                    }
-                    isSeeking = false
-                },
-                enabled = videoUri != null && durationMs > 0L
-            )
-
-            Row(
+            
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                shape = RoundedCornerShape(20.dp),
+                color = ClipkaCard
             ) {
-                Text(formatTime(positionMs), color = Color.LightGray)
-                Text(formatTime(durationMs), color = Color.LightGray)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "TIMELINE",
+                                color = ClipkaAccent,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+
+                            Text(
+                                text = "Navigate your video",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = ClipkaBackground
+                        ) {
+                            Text(
+                                text = if (durationMs > 0L) {
+                                    "${(durationMs / 1000L)} sec"
+                                } else {
+                                    "No video"
+                                },
+                                modifier = Modifier.padding(
+                                    horizontal = 10.dp,
+                                    vertical = 7.dp
+                                ),
+                                color = ClipkaAccent,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Slider(
+                        value = if (isSeeking) {
+                            seekValue
+                        } else if (durationMs > 0L) {
+                            (positionMs.toFloat() / durationMs)
+                                .coerceIn(0f, 1f)
+                        } else {
+                            0f
+                        },
+                        onValueChange = { newValue ->
+                            isSeeking = true
+                            seekValue = newValue
+                        },
+                        onValueChangeFinished = {
+                            previewingClipId = null
+                            if (durationMs > 0L) {
+                                exoPlayer.seekTo(
+                                    (seekValue * durationMs).toLong()
+                                )
+                            }
+                            isSeeking = false
+                        },
+                        enabled = videoUri != null && durationMs > 0L
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                text = "CURRENT",
+                                color = Color.LightGray,
+                                fontSize = 10.sp,
+                                letterSpacing = 1.sp
+                            )
+
+                            Text(
+                                text = formatTime(
+                                    if (isSeeking && durationMs > 0L) {
+                                        (seekValue * durationMs).toLong()
+                                    } else {
+                                        positionMs
+                                    }
+                                ),
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(
+                                text = "DURATION",
+                                color = Color.LightGray,
+                                fontSize = 10.sp,
+                                letterSpacing = 1.sp
+                            )
+
+                            Text(
+                                text = formatTime(durationMs),
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
+
 
                 Button(
                 onClick = {
