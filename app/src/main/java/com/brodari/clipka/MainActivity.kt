@@ -1700,108 +1700,147 @@ private fun ClipkaScreen() {
                 it.id == selectedClipId
             }
 
+            
             if (frameEditorClip != null) {
-                Divider(
-                    color = Color(0xFF393544),
-                    thickness = 1.dp
-                )
-
-                Button(
-                    onClick = {
-                        val sourceUri = videoUri
-                        val clip = frameEditorClip
-
-                        if (sourceUri == null) {
-                            faceDetectionStatus = "Pehle video select karo."
-                        } else if (!isDetectingFaces) {
-                            isDetectingFaces = true
-                            faceDetectionStatus = "Faces detect ho rahe hain..."
-
-                            faceDetectionScope.launch {
-                                try {
-                                    val detectedFrames =
-                                        ClipkaFaceDetection.detectFaces(
-                                            context = context,
-                                            videoUri = sourceUri,
-                                            startMs = clip.startMs,
-                                            endMs = clip.endMs
-                                        )
-
-                                    if (detectedFrames.isEmpty()) {
-                                        faceDetectionStatus =
-                                            "Koi face nahi mila. Doosra clip try karo."
-                                    } else {
-                                        applyClipChange(
-                                            clips.map { item ->
-                                                if (item.id == clip.id) {
-                                                    item.copy(
-                                                        frames = detectedFrames,
-                                                        frameLayout = "SINGLE"
-                                                    )
-                                                } else {
-                                                    item
-                                                }
-                                            }
-                                        )
-
-                                        faceDetectionStatus =
-                                            "${detectedFrames.size} face(s) detected."
-                                    }
-                                } catch (error: Exception) {
-                                    faceDetectionStatus =
-                                        "Detection failed: ${error.message ?: "unknown error"}"
-                                } finally {
-                                    isDetectingFaces = false
-                                }
-                            }
-                        }
-                    },
-                    enabled = !isDetectingFaces && videoUri != null,
-                    modifier = Modifier.fillMaxWidth()
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    color = ClipkaCard
                 ) {
-                    Text(
-                        if (isDetectingFaces) {
-                            "Detecting Faces..."
-                        } else {
-                            "Detect Faces"
-                        }
-                    )
-                }
-
-                if (faceDetectionStatus.isNotEmpty()) {
-                    Text(
-                        text = faceDetectionStatus,
-                        color = ClipkaAccent,
-                        fontSize = 13.sp
-                    )
-                }
-
-                FrameEditor(
-                    clip = frameEditorClip,
-                    onFramesChange = { updatedFrames ->
-                        applyClipChange(
-                            clips.map { item ->
-                                if (item.id == frameEditorClip.id) {
-                                    item.copy(frames = updatedFrames)
-                                } else {
-                                    item
-                                }
-                            }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "FRAME & FACE EDITOR",
+                            color = ClipkaAccent,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
                         )
-                    },
-                    onLayoutChange = { updatedLayout ->
-                        applyClipChange(
-                            clips.map { item ->
-                                if (item.id == frameEditorClip.id) {
-                                    item.copy(frameLayout = updatedLayout)
-                                } else {
-                                    item
+
+                        Text(
+                            text = "Adjust framing for ${frameEditorClip.name}",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Text(
+                            text = "Detect faces automatically or customize this clip's frame and layout below.",
+                            color = Color.LightGray,
+                            fontSize = 13.sp
+                        )
+
+                        Button(
+                            onClick = {
+                                val sourceUri = videoUri
+                                val clip = frameEditorClip
+
+                                if (sourceUri == null) {
+                                    faceDetectionStatus = "Pehle video select karo."
+                                } else if (!isDetectingFaces) {
+                                    isDetectingFaces = true
+                                    faceDetectionStatus = "Faces detect ho rahe hain..."
+
+                                    faceDetectionScope.launch {
+                                        try {
+                                            val detectedFrames =
+                                                ClipkaFaceDetection.detectFaces(
+                                                    context = context,
+                                                    videoUri = sourceUri,
+                                                    startMs = clip.startMs,
+                                                    endMs = clip.endMs
+                                                )
+
+                                            if (detectedFrames.isEmpty()) {
+                                                faceDetectionStatus =
+                                                    "Koi face nahi mila. Doosra clip try karo."
+                                            } else {
+                                                applyClipChange(
+                                                    clips.map { item ->
+                                                        if (item.id == clip.id) {
+                                                            item.copy(
+                                                                frames = detectedFrames,
+                                                                frameLayout = "SINGLE"
+                                                            )
+                                                        } else {
+                                                            item
+                                                        }
+                                                    }
+                                                )
+
+                                                faceDetectionStatus =
+                                                    "${detectedFrames.size} face(s) detected."
+                                            }
+                                        } catch (error: Exception) {
+                                            faceDetectionStatus =
+                                                "Detection failed: ${error.message ?: "unknown error"}"
+                                        } finally {
+                                            isDetectingFaces = false
+                                        }
+                                    }
                                 }
+                            },
+                            enabled = !isDetectingFaces && videoUri != null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                if (isDetectingFaces) {
+                                    "Detecting Faces..."
+                                } else {
+                                    "Detect Faces"
+                                }
+                            )
+                        }
+
+                        if (faceDetectionStatus.isNotEmpty()) {
+                            Text(
+                                text = faceDetectionStatus,
+                                color = ClipkaAccent,
+                                fontSize = 13.sp
+                            )
+                        }
+
+                        Divider(
+                            color = Color(0xFF393544),
+                            thickness = 1.dp
+                        )
+
+                        FrameEditor(
+                            clip = frameEditorClip,
+                            onFramesChange = { updatedFrames ->
+                                applyClipChange(
+                                    clips.map { item ->
+                                        if (item.id == frameEditorClip.id) {
+                                            item.copy(frames = updatedFrames)
+                                        } else {
+                                            item
+                                        }
+                                    }
+                                )
+                            },
+                            onLayoutChange = { updatedLayout ->
+                                applyClipChange(
+                                    clips.map { item ->
+                                        if (item.id == frameEditorClip.id) {
+                                            item.copy(frameLayout = updatedLayout)
+                                        } else {
+                                            item
+                                        }
+                                    }
+                                )
                             }
                         )
                     }
-                )
+                }
             }
+
 
             Text(
                 text = "Each clip exports with its own selected aspect ratio.",
