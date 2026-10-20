@@ -1147,8 +1147,8 @@ if (frameEditorClip != null) {
             )
         }
     }
-}
-
+ }
+ } 
 private fun validateClipTimes(
     startMs: Long?,
     endMs: Long?,
