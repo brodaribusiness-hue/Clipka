@@ -1693,7 +1693,8 @@ private fun ClipkaScreen() {
                             )
                         }
                     }
-
+                } 
+            } 
 
             val frameEditorClip = clips.firstOrNull {
                 it.id == selectedClipId
