@@ -5,15 +5,14 @@ import java.util.UUID
 
 /**
  * One editable clip cut from a source video.
- *
- * Times are stored in milliseconds relative to the source video.
- * Each individual clip must be longer than zero and at most 180 seconds.
+ * Each clip has its own aspect ratio.
  */
 data class ClipSegment(
     val id: String = UUID.randomUUID().toString(),
     val name: String = "Clip",
     val startMs: Long,
-    val endMs: Long
+    val endMs: Long,
+    val aspectRatio: String = "9:16"
 ) {
     val durationMs: Long
         get() = endMs - startMs
@@ -37,11 +36,23 @@ data class ClipSegment(
             )
         }
 
+        if (aspectRatio !in SUPPORTED_ASPECT_RATIOS) {
+            return ClipValidationResult.Invalid(
+                "Unsupported aspect ratio."
+            )
+        }
+
         return ClipValidationResult.Valid
     }
 
     companion object {
         const val MAX_CLIP_DURATION_MS = 180_000L
+
+        val SUPPORTED_ASPECT_RATIOS = setOf(
+            "9:16",
+            "1:1",
+            "16:9"
+        )
     }
 }
 
