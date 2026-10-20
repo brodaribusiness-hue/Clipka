@@ -1,4 +1,3 @@
-
 package com.brodari.clipka
 
 import android.net.Uri
@@ -59,7 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.transformer.Effects 
+import androidx.media3.transformer.Effects
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -123,8 +122,8 @@ private fun ClipkaScreen() {
     var clipError by remember { mutableStateOf("") }
     var exportStatus by remember { mutableStateOf("") }
     var faceDetectionStatus by remember { mutableStateOf("") }
-var isDetectingFaces by remember { mutableStateOf(false) }
-val faceDetectionScope = rememberCoroutineScope()
+    var isDetectingFaces by remember { mutableStateOf(false) }
+    val faceDetectionScope = rememberCoroutineScope()
     var isExporting by remember { mutableStateOf(false) }
     var pendingExportClip by remember { mutableStateOf<ClipSegment?>(null) }
     var activeTransformer by remember { mutableStateOf<Transformer?>(null) }
@@ -239,7 +238,6 @@ val faceDetectionScope = rememberCoroutineScope()
                     )
                     .build()
 
-                
                 // Step 2: Selected aspect ratio set karo.
                 val targetAspectRatio = when (clipToExport.aspectRatio) {
                     "9:16" -> 9f / 16f
@@ -284,7 +282,6 @@ val faceDetectionScope = rememberCoroutineScope()
                         )
                     )
                     .build()
-
 
                 val transformer = Transformer.Builder(context)
                     .addListener(object : Transformer.Listener {
@@ -425,7 +422,6 @@ val faceDetectionScope = rememberCoroutineScope()
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -464,7 +460,6 @@ val faceDetectionScope = rememberCoroutineScope()
                     )
                 }
             }
-
 
             Text(
                 text = if (previewClip != null) {
@@ -522,43 +517,42 @@ val faceDetectionScope = rememberCoroutineScope()
                             }
                         }
                     } else {
-                        
-Box(
-    modifier = Modifier.fillMaxSize()
-) {
-    AndroidView(
-        modifier = Modifier.fillMaxSize(),
-        factory = { viewContext ->
-            PlayerView(viewContext).apply {
-                player = exoPlayer
-                useController = false
-                resizeMode = if (previewClip != null) {
-                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                } else {
-                    AspectRatioFrameLayout.RESIZE_MODE_FIT
-                }
-            }
-        },
-        update = { playerView ->
-            playerView.player = exoPlayer
-            playerView.resizeMode = if (previewClip != null) {
-                AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-            } else {
-                AspectRatioFrameLayout.RESIZE_MODE_FIT
-            }
-        }
-    )
+                        Box(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            AndroidView(
+                                modifier = Modifier.fillMaxSize(),
+                                factory = { viewContext ->
+                                    PlayerView(viewContext).apply {
+                                        player = exoPlayer
+                                        useController = false
+                                        resizeMode = if (previewClip != null) {
+                                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                        } else {
+                                            AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                        }
+                                    }
+                                },
+                                update = { playerView ->
+                                    playerView.player = exoPlayer
+                                    playerView.resizeMode = if (previewClip != null) {
+                                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                    } else {
+                                        AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                    }
+                                }
+                            )
 
-        if (previewClip != null && previewClip.frames.isNotEmpty()) {
-        FramePreviewOverlay(
-            frames = previewClip.frames,
-            modifier = Modifier.fillMaxSize()
-        )
-    }
-}
+                            if (previewClip != null && previewClip.frames.isNotEmpty()) {
+                                FramePreviewOverlay(
+                                    frames = previewClip.frames,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
                     }
                 }
-                    } 
+            }
 
             Text(
                 text = if (previewClip != null) {
@@ -572,7 +566,7 @@ Box(
                 fontSize = 12.sp
             )
 
-                        Surface(
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 color = ClipkaCard
@@ -589,83 +583,85 @@ Box(
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
-            Button(
-                onClick = {
-                    videoPicker.launch(arrayOf("video/*"))
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FolderOpen,
-                    contentDescription = null
-                )
-                Spacer(Modifier.size(8.dp))
-                Text("Choose video")
-            }
 
-            Text(
-                text = videoName,
-                color = Color.LightGray,
-                fontSize = 13.sp
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Button(
-                    onClick = {
-                        if (exoPlayer.isPlaying) {
-                            exoPlayer.pause()
-                        } else if (videoUri != null) {
-                            val activeClip = clips.firstOrNull {
-                                it.id == previewingClipId
-                            }
-
-                            if (
-                                activeClip != null &&
-                                exoPlayer.currentPosition >= activeClip.endMs
-                            ) {
-                                exoPlayer.seekTo(activeClip.startMs)
-                            }
-
-                            exoPlayer.play()
-                        }
-                    },
-                    enabled = videoUri != null,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) {
-                            Icons.Default.Pause
-                        } else {
-                            Icons.Default.PlayArrow
+                    Button(
+                        onClick = {
+                            videoPicker.launch(arrayOf("video/*"))
                         },
-                        contentDescription = null
-                    )
-                    Spacer(Modifier.size(6.dp))
-                    Text(if (isPlaying) "Pause" else "Play")
-                }
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Text("Choose video")
+                    }
 
-                Button(
-                    onClick = {
-                        previewingClipId = null
-                        exoPlayer.seekTo(0L)
-                        exoPlayer.pause()
-                    },
-                    enabled = videoUri != null,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = null
+                    Text(
+                        text = videoName,
+                        color = Color.LightGray,
+                        fontSize = 13.sp
                     )
-                    Spacer(Modifier.size(6.dp))
-                    Text("Restart Original")
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                if (exoPlayer.isPlaying) {
+                                    exoPlayer.pause()
+                                } else if (videoUri != null) {
+                                    val activeClip = clips.firstOrNull {
+                                        it.id == previewingClipId
+                                    }
+
+                                    if (
+                                        activeClip != null &&
+                                        exoPlayer.currentPosition >= activeClip.endMs
+                                    ) {
+                                        exoPlayer.seekTo(activeClip.startMs)
+                                    }
+
+                                    exoPlayer.play()
+                                }
+                            },
+                            enabled = videoUri != null,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) {
+                                    Icons.Default.Pause
+                                } else {
+                                    Icons.Default.PlayArrow
+                                },
+                                contentDescription = null
+                            )
+                            Spacer(Modifier.size(6.dp))
+                            Text(if (isPlaying) "Pause" else "Play")
+                        }
+
+                        Button(
+                            onClick = {
+                                previewingClipId = null
+                                exoPlayer.seekTo(0L)
+                                exoPlayer.pause()
+                            },
+                            enabled = videoUri != null,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null
+                            )
+                            Spacer(Modifier.size(6.dp))
+                            Text("Restart Original")
+                        }
+                    }
                 }
             }
-                } 
-                        } 
+
             Text(
                 text = "Video Timeline",
                 color = Color.White,
@@ -1106,112 +1102,112 @@ Box(
             }
 
             val frameEditorClip = clips.firstOrNull {
-    it.id == selectedClipId
-}
+                it.id == selectedClipId
+            }
 
-if (frameEditorClip != null) {
-    Divider(
-        color = Color(0xFF393544),
-        thickness = 1.dp
-    )
+            if (frameEditorClip != null) {
+                Divider(
+                    color = Color(0xFF393544),
+                    thickness = 1.dp
+                )
 
-    
-    Button(
-        onClick = {
-            val sourceUri = videoUri
-            val clip = frameEditorClip
+                Button(
+                    onClick = {
+                        val sourceUri = videoUri
+                        val clip = frameEditorClip
 
-            if (sourceUri == null) {
-                faceDetectionStatus = "Pehle video select karo."
-            } else if (!isDetectingFaces) {
-                isDetectingFaces = true
-                faceDetectionStatus = "Faces detect ho rahe hain..."
+                        if (sourceUri == null) {
+                            faceDetectionStatus = "Pehle video select karo."
+                        } else if (!isDetectingFaces) {
+                            isDetectingFaces = true
+                            faceDetectionStatus = "Faces detect ho rahe hain..."
 
-                faceDetectionScope.launch {
-                    try {
-                        val detectedFrames =
-                            ClipkaFaceDetection.detectFaces(
-                                context = context,
-                                videoUri = sourceUri,
-                                startMs = clip.startMs,
-                                endMs = clip.endMs
-                            )
-
-                        if (detectedFrames.isEmpty()) {
-                            faceDetectionStatus =
-                                "Koi face nahi mila. Doosra clip try karo."
-                        } else {
-                            applyClipChange(
-                                clips.map { item ->
-                                    if (item.id == clip.id) {
-                                        item.copy(
-                                            frames = detectedFrames,
-                                            frameLayout = "SINGLE"
+                            faceDetectionScope.launch {
+                                try {
+                                    val detectedFrames =
+                                        ClipkaFaceDetection.detectFaces(
+                                            context = context,
+                                            videoUri = sourceUri,
+                                            startMs = clip.startMs,
+                                            endMs = clip.endMs
                                         )
+
+                                    if (detectedFrames.isEmpty()) {
+                                        faceDetectionStatus =
+                                            "Koi face nahi mila. Doosra clip try karo."
                                     } else {
-                                        item
+                                        applyClipChange(
+                                            clips.map { item ->
+                                                if (item.id == clip.id) {
+                                                    item.copy(
+                                                        frames = detectedFrames,
+                                                        frameLayout = "SINGLE"
+                                                    )
+                                                } else {
+                                                    item
+                                                }
+                                            }
+                                        )
+
+                                        faceDetectionStatus =
+                                            "${detectedFrames.size} face(s) detected."
                                     }
+                                } catch (error: Exception) {
+                                    faceDetectionStatus =
+                                        "Detection failed: ${error.message ?: "unknown error"}"
+                                } finally {
+                                    isDetectingFaces = false
                                 }
-                            )
-
-                            faceDetectionStatus =
-                                "${detectedFrames.size} face(s) detected."
+                            }
                         }
-                    } catch (error: Exception) {
-                        faceDetectionStatus =
-                            "Detection failed: ${error.message ?: "unknown error"}"
-                    } finally {
-                        isDetectingFaces = false
-                    }
+                    },
+                    enabled = !isDetectingFaces && videoUri != null,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (isDetectingFaces) {
+                            "Detecting Faces..."
+                        } else {
+                            "Detect Faces"
+                        }
+                    )
                 }
-            }
-        },
-        enabled = !isDetectingFaces && videoUri != null,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Text(
-            if (isDetectingFaces) {
-                "Detecting Faces..."
-            } else {
-                "Detect Faces"
-            }
-        )
-    }
 
-    if (faceDetectionStatus.isNotEmpty()) {
-        Text(
-            text = faceDetectionStatus,
-            color = ClipkaAccent,
-            fontSize = 13.sp
-        )
-    }
+                if (faceDetectionStatus.isNotEmpty()) {
+                    Text(
+                        text = faceDetectionStatus,
+                        color = ClipkaAccent,
+                        fontSize = 13.sp
+                    )
+                }
 
-    FrameEditor(
-        clip = frameEditorClip,
-        onFramesChange = { updatedFrames ->
-            applyClipChange(
-                clips.map { item ->
-                    if (item.id == frameEditorClip.id) {
-                        item.copy(frames = updatedFrames)
-                    } else {
-                        item
+                FrameEditor(
+                    clip = frameEditorClip,
+                    onFramesChange = { updatedFrames ->
+                        applyClipChange(
+                            clips.map { item ->
+                                if (item.id == frameEditorClip.id) {
+                                    item.copy(frames = updatedFrames)
+                                } else {
+                                    item
+                                }
+                            }
+                        )
+                    },
+                    onLayoutChange = { updatedLayout ->
+                        applyClipChange(
+                            clips.map { item ->
+                                if (item.id == frameEditorClip.id) {
+                                    item.copy(frameLayout = updatedLayout)
+                                } else {
+                                    item
+                                }
+                            }
+                        )
                     }
-                }
-            )
-        },
-        onLayoutChange = { updatedLayout ->
-            applyClipChange(
-                clips.map { item ->
-                    if (item.id == frameEditorClip.id) {
-                        item.copy(frameLayout = updatedLayout)
-                    } else {
-                        item
-                    }
-                }
-            )
-        }
-    )
-}
+                )
+            }
+
             Text(
                 text = "Each clip exports with its own selected aspect ratio.",
                 color = Color.LightGray,
@@ -1219,8 +1215,8 @@ if (frameEditorClip != null) {
             )
         }
     }
- }
-    
+}
+
 private fun validateClipTimes(
     startMs: Long?,
     endMs: Long?,
