@@ -470,31 +470,41 @@ val faceDetectionScope = rememberCoroutineScope()
                             }
                         }
                     } else {
-                        AndroidView(
-                            modifier = Modifier.fillMaxSize(),
-                            factory = { viewContext ->
-                                PlayerView(viewContext).apply {
-                                    player = exoPlayer
-                                    useController = false
-                                    resizeMode = if (previewClip != null) {
-                                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                    } else {
-                                        AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                    }
-                                }
-                            },
-                            update = { playerView ->
-                                playerView.player = exoPlayer
-                                playerView.resizeMode = if (previewClip != null) {
-                                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                } else {
-                                    AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                }
-                            }
-                        )
-                    }
+                        
+Box(
+    modifier = Modifier.fillMaxSize()
+) {
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { viewContext ->
+            PlayerView(viewContext).apply {
+                player = exoPlayer
+                useController = false
+                resizeMode = if (previewClip != null) {
+                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                } else {
+                    AspectRatioFrameLayout.RESIZE_MODE_FIT
                 }
             }
+        },
+        update = { playerView ->
+            playerView.player = exoPlayer
+            playerView.resizeMode = if (previewClip != null) {
+                AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+            } else {
+                AspectRatioFrameLayout.RESIZE_MODE_FIT
+            }
+        }
+    )
+
+    if (previewClip != null && previewClip.frames.isNotEmpty()) {
+        FramePreviewOverlay(
+            frames = previewClip.frames,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
 
             Text(
                 text = if (previewClip != null) {
