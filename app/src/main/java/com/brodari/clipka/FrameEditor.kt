@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -27,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 private val FrameEditorAccent = Color(0xFFB7A9FF)
-private val FrameEditorBackground = Color(0xFF101116)
 
 @Composable
 fun FrameEditor(
@@ -45,15 +43,12 @@ fun FrameEditor(
         )
 
         Text(
-            text = "Frames ki position aur size neeche controls se adjust karo. " +
-                "Har clip ki framing alag save hoti hai.",
+            text = "Adjust each frame's position and size. " +
+                "Each clip keeps its own framing settings.",
             color = Color.LightGray
         )
 
-        Text(
-            text = "Layout",
-            color = Color.White
-        )
+        Text("Layout", color = Color.White)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -111,10 +106,14 @@ fun FrameEditor(
                 )
                 .padding(8.dp)
         ) {
+            // Capture the width here so nested Box scopes can use it.
+            val previewWidth = maxWidth
+            val previewHeight = 224.dp
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(224.dp)
+                    .height(previewHeight)
             ) {
                 clip.frames.forEachIndexed { index, frame ->
                     val frameColor = when (index % 3) {
@@ -126,11 +125,11 @@ fun FrameEditor(
                     Box(
                         modifier = Modifier
                             .offset(
-                                x = maxWidth * frame.x,
-                                y = 224.dp * frame.y
+                                x = previewWidth * frame.x,
+                                y = previewHeight * frame.y
                             )
-                            .width(maxWidth * frame.width)
-                            .height(224.dp * frame.height)
+                            .width(previewWidth * frame.width)
+                            .height(previewHeight * frame.height)
                             .border(
                                 width = 2.dp,
                                 color = frameColor,
@@ -158,6 +157,7 @@ fun FrameEditor(
         Button(
             onClick = {
                 val index = clip.frames.size
+
                 val newFrame = if (index == 0) {
                     FrameRegion(
                         name = "Frame 1",
@@ -167,10 +167,12 @@ fun FrameEditor(
                         height = 0.80f
                     )
                 } else {
+                    val x = if (index % 2 == 0) 0.05f else 0.55f
+
                     FrameRegion(
                         name = "Frame ${index + 1}",
-                        x = 0.05f + (index % 2) * 0.45f,
-                        y = 0.05f + (index % 2) * 0.10f,
+                        x = x,
+                        y = 0.10f,
                         width = 0.40f,
                         height = 0.60f
                     )
@@ -188,7 +190,7 @@ fun FrameEditor(
             clip.frameLayout == "SPLIT_HORIZONTAL"
         ) {
             Text(
-                text = "Split layout ke liye kam az kam 2 frames chahiye.",
+                text = "Split layouts require at least 2 frames.",
                 color = FrameEditorAccent
             )
         }
@@ -209,10 +211,7 @@ fun FrameEditor(
                         color = Color.White
                     )
 
-                    Text(
-                        text = "Horizontal position",
-                        color = Color.LightGray
-                    )
+                    Text("Horizontal position", color = Color.LightGray)
 
                     Slider(
                         value = frame.x,
@@ -233,10 +232,7 @@ fun FrameEditor(
                             .coerceAtLeast(0f)
                     )
 
-                    Text(
-                        text = "Vertical position",
-                        color = Color.LightGray
-                    )
+                    Text("Vertical position", color = Color.LightGray)
 
                     Slider(
                         value = frame.y,
@@ -257,10 +253,7 @@ fun FrameEditor(
                             .coerceAtLeast(0f)
                     )
 
-                    Text(
-                        text = "Frame width",
-                        color = Color.LightGray
-                    )
+                    Text("Frame width", color = Color.LightGray)
 
                     Slider(
                         value = frame.width,
@@ -281,10 +274,7 @@ fun FrameEditor(
                             .coerceAtLeast(0.10f)
                     )
 
-                    Text(
-                        text = "Frame height",
-                        color = Color.LightGray
-                    )
+                    Text("Frame height", color = Color.LightGray)
 
                     Slider(
                         value = frame.height,
