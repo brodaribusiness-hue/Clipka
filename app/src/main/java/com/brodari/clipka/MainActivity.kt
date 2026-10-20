@@ -15,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -66,6 +68,7 @@ import androidx.media3.transformer.Composition
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 
@@ -104,6 +107,8 @@ private fun ClipkaScreen() {
     var isSeeking by remember { mutableStateOf(false) }
     var seekValue by remember { mutableStateOf(0f) }
 
+    var selectedAspectRatio by remember { mutableStateOf("9:16") }
+
     var startInput by remember { mutableStateOf("00:00") }
     var endInput by remember { mutableStateOf("00:30") }
     var clips by remember { mutableStateOf(listOf<ClipSegment>()) }
@@ -124,6 +129,12 @@ private fun ClipkaScreen() {
 
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build()
+    }
+
+    val previewRatio = when (selectedAspectRatio) {
+        "9:16" -> 9f / 16f
+        "1:1" -> 1f
+        else -> 16f / 9f
     }
 
     fun applyClipChange(updatedClips: List<ClipSegment>) {
@@ -336,51 +347,106 @@ private fun ClipkaScreen() {
                 fontSize = 14.sp
             )
 
-            Card(
+            Text(
+                text = "Preview Aspect Ratio",
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf("9:16", "1:1", "16:9").forEach { ratio ->
+                    if (selectedAspectRatio == ratio) {
+                        Button(
+                            onClick = { selectedAspectRatio = ratio },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(ratio)
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { selectedAspectRatio = ratio },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(ratio)
+                        }
+                    }
+                }
+            }
+
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(230.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Black
-                ),
-                shape = RoundedCornerShape(18.dp)
+                contentAlignment = Alignment.Center
             ) {
-                if (videoUri == null) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                val previewWidth = minOf(
+                    maxWidth,
+                    230.dp * previewRatio
+                )
+                val previewHeight = minOf(
+                    230.dp,
+                    previewWidth / previewRatio
+                )
+
+                Card(
+                    modifier = Modifier
+                        .width(previewWidth)
+                        .height(previewHeight),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.Black
+                    ),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    if (videoUri == null) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                modifier = Modifier.size(52.dp),
-                                tint = ClipkaAccent
-                            )
-                            Text(
-                                text = "Select a video to preview",
-                                color = Color.White
-                            )
-                        }
-                    }
-                } else {
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { viewContext ->
-                            PlayerView(viewContext).apply {
-                                this.player = exoPlayer
-                                useController = false
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(52.dp),
+                                    tint = ClipkaAccent
+                                )
+                                Text(
+                                    text = "Select a video to preview",
+                                    color = Color.White
+                                )
                             }
-                        },
-                        update = { playerView ->
-                            playerView.player = exoPlayer
                         }
-                    )
+                    } else {
+                        AndroidView(
+                            modifier = Modifier.fillMaxSize(),
+                            factory = { viewContext ->
+                                PlayerView(viewContext).apply {
+                                    player = exoPlayer
+                                    useController = false
+                                    resizeMode =
+                                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                }
+                            },
+                            update = { playerView ->
+                                playerView.player = exoPlayer
+                                playerView.resizeMode =
+                                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                            }
+                        )
+                    }
                 }
             }
+
+            Text(
+                text = "Preview ratio: $selectedAspectRatio",
+                color = ClipkaAccent,
+                fontSize = 12.sp
+            )
 
             Button(
                 onClick = {
@@ -801,13 +867,13 @@ private fun ClipkaScreen() {
             }
 
             Text(
-                text = "Phase 3: selected clip MP4 export.",
+                text = "Phase 4.1: preview aspect ratio controls.",
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
 
             Text(
-                text = "Aspect ratios, captions and batch export are later phases.",
+                text = "Preview ratio only. Export cropping, captions and batch export are later phases.",
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
