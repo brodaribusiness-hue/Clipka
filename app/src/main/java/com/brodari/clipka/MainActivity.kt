@@ -1131,73 +1131,108 @@ private fun ClipkaScreen() {
             }
 
 
-            Text(
-                text = "Clip Editing",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Row(
+            
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                shape = RoundedCornerShape(20.dp),
+                color = ClipkaCard
             ) {
-                OutlinedButton(
-                    onClick = {
-                        if (undoStack.isNotEmpty()) {
-                            val previousClips = undoStack.last()
-
-                            redoStack = redoStack + listOf(clips)
-                            undoStack = undoStack.dropLast(1)
-                            clips = previousClips
-
-                            if (clips.none { it.id == selectedClipId }) {
-                                selectedClipId = null
-                                startInput = "00:00"
-                                endInput = "00:30"
-                            }
-
-                            if (clips.none { it.id == previewingClipId }) {
-                                previewingClipId = null
-                            }
-
-                            clipError = ""
-                        }
-                    },
-                    enabled = undoStack.isNotEmpty(),
-                    modifier = Modifier.weight(1f)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Undo")
-                }
+                    Text(
+                        text = "CLIP EDITOR",
+                        color = ClipkaAccent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
 
-                OutlinedButton(
-                    onClick = {
-                        if (redoStack.isNotEmpty()) {
-                            val nextClips = redoStack.last()
+                    Text(
+                        text = "Create and refine clips",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
 
-                            undoStack = undoStack + listOf(clips)
-                            redoStack = redoStack.dropLast(1)
-                            clips = nextClips
+                    Text(
+                        text = "Undo or redo your latest clip changes.",
+                        color = Color.LightGray,
+                        fontSize = 12.sp
+                    )
 
-                            if (clips.none { it.id == selectedClipId }) {
-                                selectedClipId = null
-                                startInput = "00:00"
-                                endInput = "00:30"
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                if (undoStack.isNotEmpty()) {
+                                    val previousClips = undoStack.last()
 
-                            if (clips.none { it.id == previewingClipId }) {
-                                previewingClipId = null
-                            }
+                                    redoStack = redoStack + listOf(clips)
+                                    undoStack = undoStack.dropLast(1)
+                                    clips = previousClips
 
-                            clipError = ""
+                                    if (clips.none { it.id == selectedClipId }) {
+                                        selectedClipId = null
+                                        startInput = "00:00"
+                                        endInput = "00:30"
+                                    }
+
+                                    if (clips.none { it.id == previewingClipId }) {
+                                        previewingClipId = null
+                                    }
+
+                                    clipError = ""
+                                }
+                            },
+                            enabled = undoStack.isNotEmpty(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("↶  Undo")
                         }
-                    },
-                    enabled = redoStack.isNotEmpty(),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text("Redo")
+
+                        OutlinedButton(
+                            onClick = {
+                                if (redoStack.isNotEmpty()) {
+                                    val nextClips = redoStack.last()
+
+                                    undoStack = undoStack + listOf(clips)
+                                    redoStack = redoStack.dropLast(1)
+                                    clips = nextClips
+
+                                    if (clips.none { it.id == selectedClipId }) {
+                                        selectedClipId = null
+                                        startInput = "00:00"
+                                        endInput = "00:30"
+                                    }
+
+                                    if (clips.none { it.id == previewingClipId }) {
+                                        previewingClipId = null
+                                    }
+
+                                    clipError = ""
+                                }
+                            },
+                            enabled = redoStack.isNotEmpty(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Redo  ↷")
+                        }
+                    }
                 }
             }
+
 
             Text(
                 text = "Time format: MM:SS or HH:MM:SS",
