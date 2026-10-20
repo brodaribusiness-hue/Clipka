@@ -1234,118 +1234,167 @@ private fun ClipkaScreen() {
             }
 
 
-            Text(
-                text = "Time format: MM:SS or HH:MM:SS",
-                color = Color.LightGray,
-                fontSize = 12.sp
-            )
-
-            OutlinedTextField(
-                value = startInput,
-                onValueChange = { startInput = it },
-                label = { Text("Start time") },
+            
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            OutlinedTextField(
-                value = endInput,
-                onValueChange = { endInput = it },
-                label = { Text("End time") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-
-            Button(
-                onClick = {
-                    val startTime = parseTime(startInput)
-                    val endTime = parseTime(endInput)
-
-                    clipError = validateClipTimes(
-                        startMs = startTime,
-                        endMs = endTime,
-                        videoDurationMs = durationMs,
-                        videoMissing = videoUri == null
+                shape = RoundedCornerShape(20.dp),
+                color = ClipkaCard
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "CLIP TRIM",
+                        color = ClipkaAccent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
                     )
 
-                    if (
-                        clipError.isEmpty() &&
-                        startTime != null &&
-                        endTime != null
+                    Text(
+                        text = "Set clip boundaries",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Text(
+                        text = "Time format: MM:SS or HH:MM:SS",
+                        color = Color.LightGray,
+                        fontSize = 12.sp
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        val newSegment = ClipSegment(
-                            name = "Clip ${clips.size + 1}",
-                            startMs = startTime,
-                            endMs = endTime,
-                            aspectRatio = "9:16"
+                        OutlinedTextField(
+                            value = startInput,
+                            onValueChange = { startInput = it },
+                            label = { Text("Start time") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
                         )
 
-                        applyClipChange(clips + newSegment)
-                        selectedClipId = newSegment.id
-                        previewingClipId = newSegment.id
-                        exoPlayer.pause()
-                        exoPlayer.seekTo(newSegment.startMs)
-                    }
-                },
-                enabled = videoUri != null,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Add Clip")
-            }
-
-            Button(
-                onClick = {
-                    val selectedSegment = clips.firstOrNull {
-                        it.id == selectedClipId
-                    }
-
-                    val startTime = parseTime(startInput)
-                    val endTime = parseTime(endInput)
-
-                    clipError = when {
-                        selectedSegment == null ->
-                            "Pehle list se clip select karo."
-
-                        else -> validateClipTimes(
-                            startMs = startTime,
-                            endMs = endTime,
-                            videoDurationMs = durationMs,
-                            videoMissing = videoUri == null
+                        OutlinedTextField(
+                            value = endInput,
+                            onValueChange = { endInput = it },
+                            label = { Text("End time") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
                         )
                     }
 
-                    if (
-                        clipError.isEmpty() &&
-                        selectedSegment != null &&
-                        startTime != null &&
-                        endTime != null
-                    ) {
-                        val updatedSegment = selectedSegment.copy(
-                            startMs = startTime,
-                            endMs = endTime
-                        )
+                    Button(
+                        onClick = {
+                            val startTime = parseTime(startInput)
+                            val endTime = parseTime(endInput)
 
-                        applyClipChange(
-                            clips.map { segment ->
-                                if (segment.id == updatedSegment.id) {
-                                    updatedSegment
-                                } else {
-                                    segment
-                                }
+                            clipError = validateClipTimes(
+                                startMs = startTime,
+                                endMs = endTime,
+                                videoDurationMs = durationMs,
+                                videoMissing = videoUri == null
+                            )
+
+                            if (
+                                clipError.isEmpty() &&
+                                startTime != null &&
+                                endTime != null
+                            ) {
+                                val newSegment = ClipSegment(
+                                    name = "Clip ${clips.size + 1}",
+                                    startMs = startTime,
+                                    endMs = endTime,
+                                    aspectRatio = "9:16"
+                                )
+
+                                applyClipChange(clips + newSegment)
+                                selectedClipId = newSegment.id
+                                previewingClipId = newSegment.id
+                                exoPlayer.pause()
+                                exoPlayer.seekTo(newSegment.startMs)
                             }
-                        )
-
-                        selectedClipId = updatedSegment.id
-                        previewingClipId = updatedSegment.id
-                        exoPlayer.pause()
-                        exoPlayer.seekTo(updatedSegment.startMs)
+                        },
+                        enabled = videoUri != null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("＋  Add Clip")
                     }
-                },
-                enabled = selectedClipId != null,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Save Edit")
+
+                    OutlinedButton(
+                        onClick = {
+                            val selectedSegment = clips.firstOrNull {
+                                it.id == selectedClipId
+                            }
+
+                            val startTime = parseTime(startInput)
+                            val endTime = parseTime(endInput)
+
+                            clipError = when {
+                                selectedSegment == null ->
+                                    "Pehle list se clip select karo."
+
+                                else -> validateClipTimes(
+                                    startMs = startTime,
+                                    endMs = endTime,
+                                    videoDurationMs = durationMs,
+                                    videoMissing = videoUri == null
+                                )
+                            }
+
+                            if (
+                                clipError.isEmpty() &&
+                                selectedSegment != null &&
+                                startTime != null &&
+                                endTime != null
+                            ) {
+                                val updatedSegment = selectedSegment.copy(
+                                    startMs = startTime,
+                                    endMs = endTime
+                                )
+
+                                applyClipChange(
+                                    clips.map { segment ->
+                                        if (segment.id == updatedSegment.id) {
+                                            updatedSegment
+                                        } else {
+                                            segment
+                                        }
+                                    }
+                                )
+
+                                selectedClipId = updatedSegment.id
+                                previewingClipId = updatedSegment.id
+                                exoPlayer.pause()
+                                exoPlayer.seekTo(updatedSegment.startMs)
+                            }
+                        },
+                        enabled = selectedClipId != null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Save Edit")
+                    }
+
+                    if (clipError.isNotEmpty()) {
+                        Text(
+                            text = clipError,
+                            color = Color(0xFFFF7777),
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
+
 
             if (clipError.isNotEmpty()) {
                 Text(
