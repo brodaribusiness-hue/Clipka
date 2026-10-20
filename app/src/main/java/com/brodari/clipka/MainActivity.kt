@@ -694,8 +694,7 @@ private fun ClipkaScreen() {
                     }
                 }
             }
-                }
-                        }
+                    
             Text(
                 text = if (previewClip != null) {
                     "Previewing ${previewClip.name}: " +
@@ -708,7 +707,8 @@ private fun ClipkaScreen() {
                 fontSize = 12.sp
             )
 
-            
+                            }
+                        }
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
