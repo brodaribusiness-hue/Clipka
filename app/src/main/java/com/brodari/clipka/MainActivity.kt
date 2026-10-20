@@ -107,14 +107,17 @@ private fun ClipkaScreen() {
     var isSeeking by remember { mutableStateOf(false) }
     var seekValue by remember { mutableStateOf(0f) }
 
-    var selectedAspectRatio by remember { mutableStateOf("9:16") }
-
     var startInput by remember { mutableStateOf("00:00") }
     var endInput by remember { mutableStateOf("00:30") }
+
     var clips by remember { mutableStateOf(listOf<ClipSegment>()) }
     var selectedClipId by remember { mutableStateOf<String?>(null) }
-    var clipError by remember { mutableStateOf("") }
 
+    // Null means the original video is being previewed.
+    // Otherwise, preview is limited to the chosen clip.
+    var previewingClipId by remember { mutableStateOf<String?>(null) }
+
+    var clipError by remember { mutableStateOf("") }
     var exportStatus by remember { mutableStateOf("") }
     var isExporting by remember { mutableStateOf(false) }
     var pendingExportClip by remember { mutableStateOf<ClipSegment?>(null) }
@@ -131,9 +134,14 @@ private fun ClipkaScreen() {
         ExoPlayer.Builder(context).build()
     }
 
-    val previewRatio = when (selectedAspectRatio) {
+    val previewClip = clips.firstOrNull {
+        it.id == previewingClipId
+    }
+
+    val previewRatio = when (previewClip?.aspectRatio) {
         "9:16" -> 9f / 16f
         "1:1" -> 1f
+        "16:9" -> 16f / 9f
         else -> 16f / 9f
     }
 
@@ -149,6 +157,16 @@ private fun ClipkaScreen() {
         startInput = formatTime(segment.startMs)
         endInput = formatTime(segment.endMs)
         clipError = ""
+    }
+
+    fun showClipInPreview(segment: ClipSegment, play: Boolean) {
+        selectClip(segment)
+        previewingClipId = segment.id
+        exoPlayer.pause()
+        exoPlayer.seekTo(segment.startMs)
+        if (play) {
+            exoPlayer.play()
+        }
     }
 
     val videoPicker = rememberLauncherForActivityResult(
@@ -169,6 +187,7 @@ private fun ClipkaScreen() {
             durationMs = 0L
             clips = emptyList()
             selectedClipId = null
+            previewingClipId = null
             undoStack = emptyList()
             redoStack = emptyList()
             startInput = "00:00"
@@ -319,7 +338,22 @@ private fun ClipkaScreen() {
                     durationMs = actualDuration
                 }
             }
-            delay(300L)
+
+            val activeClip = clips.firstOrNull {
+                it.id == previewingClipId
+            }
+
+            if (
+                activeClip != null &&
+                exoPlayer.isPlaying &&
+                exoPlayer.currentPosition >= activeClip.endMs
+            ) {
+                exoPlayer.pause()
+                exoPlayer.seekTo(activeClip.endMs)
+                positionMs = activeClip.endMs
+            }
+
+            delay(200L)
         }
     }
 
@@ -348,46 +382,27 @@ private fun ClipkaScreen() {
             )
 
             Text(
-                text = "Preview Aspect Ratio",
+                text = if (previewClip != null) {
+                    "Clip Preview • ${previewClip.aspectRatio}"
+                } else {
+                    "Original Video Preview"
+                },
                 color = Color.White,
                 fontWeight = FontWeight.SemiBold
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf("9:16", "1:1", "16:9").forEach { ratio ->
-                    if (selectedAspectRatio == ratio) {
-                        Button(
-                            onClick = { selectedAspectRatio = ratio },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(ratio)
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { selectedAspectRatio = ratio },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(ratio)
-                        }
-                    }
-                }
-            }
-
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(230.dp),
+                    .height(250.dp),
                 contentAlignment = Alignment.Center
             ) {
                 val previewWidth = minOf(
                     maxWidth,
-                    230.dp * previewRatio
+                    250.dp * previewRatio
                 )
                 val previewHeight = minOf(
-                    230.dp,
+                    250.dp,
                     previewWidth / previewRatio
                 )
 
@@ -428,14 +443,20 @@ private fun ClipkaScreen() {
                                 PlayerView(viewContext).apply {
                                     player = exoPlayer
                                     useController = false
-                                    resizeMode =
+                                    resizeMode = if (previewClip != null) {
                                         AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                    } else {
+                                        AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                    }
                                 }
                             },
                             update = { playerView ->
                                 playerView.player = exoPlayer
-                                playerView.resizeMode =
+                                playerView.resizeMode = if (previewClip != null) {
                                     AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                } else {
+                                    AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                }
                             }
                         )
                     }
@@ -443,7 +464,13 @@ private fun ClipkaScreen() {
             }
 
             Text(
-                text = "Preview ratio: $selectedAspectRatio",
+                text = if (previewClip != null) {
+                    "Previewing ${previewClip.name}: " +
+                        "${formatTime(previewClip.startMs)} - " +
+                        formatTime(previewClip.endMs)
+                } else {
+                    "Original video • No clip ratio applied"
+                },
                 color = ClipkaAccent,
                 fontSize = 12.sp
             )
@@ -477,6 +504,17 @@ private fun ClipkaScreen() {
                         if (exoPlayer.isPlaying) {
                             exoPlayer.pause()
                         } else if (videoUri != null) {
+                            val activeClip = clips.firstOrNull {
+                                it.id == previewingClipId
+                            }
+
+                            if (
+                                activeClip != null &&
+                                exoPlayer.currentPosition >= activeClip.endMs
+                            ) {
+                                exoPlayer.seekTo(activeClip.startMs)
+                            }
+
                             exoPlayer.play()
                         }
                     },
@@ -497,6 +535,7 @@ private fun ClipkaScreen() {
 
                 Button(
                     onClick = {
+                        previewingClipId = null
                         exoPlayer.seekTo(0L)
                         exoPlayer.pause()
                     },
@@ -508,7 +547,7 @@ private fun ClipkaScreen() {
                         contentDescription = null
                     )
                     Spacer(Modifier.size(6.dp))
-                    Text("Restart")
+                    Text("Restart Original")
                 }
             }
 
@@ -531,6 +570,7 @@ private fun ClipkaScreen() {
                     seekValue = newValue
                 },
                 onValueChangeFinished = {
+                    previewingClipId = null
                     if (durationMs > 0L) {
                         exoPlayer.seekTo(
                             (seekValue * durationMs).toLong()
@@ -610,6 +650,12 @@ private fun ClipkaScreen() {
 
                             if (clips.none { it.id == selectedClipId }) {
                                 selectedClipId = null
+                                startInput = "00:00"
+                                endInput = "00:30"
+                            }
+
+                            if (clips.none { it.id == previewingClipId }) {
+                                previewingClipId = null
                             }
 
                             clipError = ""
@@ -632,6 +678,12 @@ private fun ClipkaScreen() {
 
                             if (clips.none { it.id == selectedClipId }) {
                                 selectedClipId = null
+                                startInput = "00:00"
+                                endInput = "00:30"
+                            }
+
+                            if (clips.none { it.id == previewingClipId }) {
+                                previewingClipId = null
                             }
 
                             clipError = ""
@@ -686,11 +738,15 @@ private fun ClipkaScreen() {
                         val newSegment = ClipSegment(
                             name = "Clip ${clips.size + 1}",
                             startMs = startTime,
-                            endMs = endTime
+                            endMs = endTime,
+                            aspectRatio = "9:16"
                         )
 
                         applyClipChange(clips + newSegment)
                         selectedClipId = newSegment.id
+                        previewingClipId = newSegment.id
+                        exoPlayer.pause()
+                        exoPlayer.seekTo(newSegment.startMs)
                     }
                 },
                 enabled = videoUri != null,
@@ -742,6 +798,9 @@ private fun ClipkaScreen() {
                         )
 
                         selectedClipId = updatedSegment.id
+                        previewingClipId = updatedSegment.id
+                        exoPlayer.pause()
+                        exoPlayer.seekTo(updatedSegment.startMs)
                     }
                 },
                 enabled = selectedClipId != null,
@@ -773,6 +832,7 @@ private fun ClipkaScreen() {
 
             clips.forEach { segment ->
                 val isSelected = segment.id == selectedClipId
+                val isPreviewing = segment.id == previewingClipId
 
                 Card(
                     modifier = Modifier
@@ -785,10 +845,7 @@ private fun ClipkaScreen() {
                                 Color.Transparent
                             },
                             shape = RoundedCornerShape(14.dp)
-                        )
-                        .clickable {
-                            selectClip(segment)
-                        },
+                        ),
                     colors = CardDefaults.cardColors(
                         containerColor = if (isSelected) {
                             Color(0xFF29253B)
@@ -819,13 +876,65 @@ private fun ClipkaScreen() {
                             color = ClipkaAccent
                         )
 
+                        Text(
+                            text = "This clip's aspect ratio",
+                            color = Color.White,
+                            fontSize = 13.sp
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("9:16", "1:1", "16:9").forEach { ratio ->
+                                if (segment.aspectRatio == ratio) {
+                                    Button(
+                                        onClick = {
+                                            applyClipChange(
+                                                clips.map { item ->
+                                                    if (item.id == segment.id) {
+                                                        item.copy(aspectRatio = ratio)
+                                                    } else {
+                                                        item
+                                                    }
+                                                }
+                                            )
+                                            if (previewingClipId == segment.id) {
+                                                previewingClipId = segment.id
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(ratio)
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = {
+                                            applyClipChange(
+                                                clips.map { item ->
+                                                    if (item.id == segment.id) {
+                                                        item.copy(aspectRatio = ratio)
+                                                    } else {
+                                                        item
+                                                    }
+                                                }
+                                            )
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(ratio)
+                                    }
+                                }
+                            }
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             OutlinedButton(
                                 onClick = {
-                                    selectClip(segment)
+                                    showClipInPreview(segment, play = false)
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -845,35 +954,41 @@ private fun ClipkaScreen() {
                                         startInput = "00:00"
                                         endInput = "00:30"
                                     }
+
+                                    if (previewingClipId == segment.id) {
+                                        previewingClipId = null
+                                        exoPlayer.pause()
+                                    }
                                 },
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text("Delete")
                             }
 
-                            OutlinedButton(
+                            Button(
                                 onClick = {
-                                    exoPlayer.seekTo(segment.startMs)
-                                    exoPlayer.play()
+                                    showClipInPreview(segment, play = true)
                                 },
                                 enabled = videoUri != null,
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Preview")
+                                Text(if (isPreviewing && isPlaying) "Playing" else "Preview")
                             }
+                        }
+
+                        if (isPreviewing) {
+                            Text(
+                                text = "Currently shown in main preview",
+                                color = ClipkaAccent,
+                                fontSize = 12.sp
+                            )
                         }
                     }
                 }
             }
 
             Text(
-                text = "Phase 4.1: preview aspect ratio controls.",
-                color = Color.LightGray,
-                fontSize = 12.sp
-            )
-
-            Text(
-                text = "Preview ratio only. Export cropping, captions and batch export are later phases.",
+                text = "Per-clip preview ratios are independent. Export cropping, captions and batch export are later phases.",
                 color = Color.LightGray,
                 fontSize = 12.sp
             )
