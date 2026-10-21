@@ -119,8 +119,19 @@ fun FrameEditor(
                 else -> clip.frames
             }
 
-            if (layout.startsWith("SPLIT_")) {
-                onFramesChange(presetFrames)
+                        if (layout.startsWith("SPLIT_")) {
+                val detectedSpeakerFrames = clip.frames
+                    .filter { it.detectedFace }
+                    .take(2)
+
+                val framesToUse =
+                    if (detectedSpeakerFrames.size >= 2) {
+                        detectedSpeakerFrames
+                    } else {
+                        presetFrames
+                    }
+
+                onFramesChange(framesToUse)
             }
             onLayoutChange(layout)
         }
