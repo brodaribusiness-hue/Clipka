@@ -125,6 +125,25 @@ class BatchZipExporter(
         }
 
         val clip = clips[currentIndex]
+        val splitLayouts = setOf(
+    "SPLIT_VERTICAL",
+    "SPLIT_60_40",
+    "SPLIT_40_60",
+    "SPLIT_HORIZONTAL",
+    "SPLIT_DIAGONAL"
+)
+
+if (
+    clip.frameLayout in splitLayouts &&
+    clip.frames.size < 2
+) {
+    onProgress(
+        "Split-screen ke liye 2 frame regions zaroori hain: " +
+            clip.name
+    )
+    finish(null)
+    return
+}
 
         val outputFile = File(
             context.cacheDir,
