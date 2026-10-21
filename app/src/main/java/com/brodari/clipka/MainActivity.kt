@@ -122,8 +122,9 @@ private fun ClipkaScreen() {
     var previewingClipId by remember { mutableStateOf<String?>(null) }
 
     var clipError by remember { mutableStateOf("") }
-    var exportStatus by remember { mutableStateOf("") }
-    var faceDetectionStatus by remember { mutableStateOf("") }
+var exportStatus by remember { mutableStateOf("") }
+var faceDetectionStatus by remember { mutableStateOf("") }
+var projectStatus by remember { mutableStateOf("") }
     var isDetectingFaces by remember { mutableStateOf(false) }
     val faceDetectionScope = rememberCoroutineScope()
     var isExporting by remember { mutableStateOf(false) }
@@ -186,7 +187,16 @@ private fun ClipkaScreen() {
     val videoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { selectedUri: Uri? ->
-        if (selectedUri != null) {
+                if (selectedUri != null) {
+            try {
+                contentResolver.takePersistableUriPermission(
+                    selectedUri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+                // Continue if persistent permission is unavailable.
+            }
+
             videoUri = selectedUri
             videoName = selectedUri.lastPathSegment
                 ?.substringAfterLast('/')
