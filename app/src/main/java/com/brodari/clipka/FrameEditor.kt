@@ -179,13 +179,7 @@ fun FrameEditor(
                 onClick = { selectLayout("SINGLE") },
                 modifier = Modifier.weight(1f)
             )
-            LayoutButton(
-                label = "Custom",
-                selected = clip.frameLayout == "CUSTOM",
-                onClick = { selectLayout("CUSTOM") },
-                modifier = Modifier.weight(1f)
-            )
-        }
+            
 
 
             LayoutButton(
