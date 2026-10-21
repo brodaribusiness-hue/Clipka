@@ -48,11 +48,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
 
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
-    implementation("androidx.media3:media3-ui:1.5.1")
-    implementation("androidx.media3:media3-transformer:1.5.1")
- 
-implementation("androidx.media3:media3-effect:1.5.1")
-
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
+implementation("androidx.media3:media3-ui:1.8.0")
+implementation("androidx.media3:media3-transformer:1.8.0")
+implementation("androidx.media3:media3-effect:1.8.0")
 implementation("com.google.mlkit:face-detection:16.1.7")
 }
