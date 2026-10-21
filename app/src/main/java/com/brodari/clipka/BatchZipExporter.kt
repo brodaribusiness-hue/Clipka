@@ -277,22 +277,23 @@ class BatchZipExporter(
 
         // Video-only sequences keep each speaker in a separate layer.
         val firstVideoSequence =
-            EditedMediaItemSequence.withVideoFrom(
-                listOf(firstVideoItem)
-            )
+    EditedMediaItemSequence(
+        listOf(firstVideoItem)
+    )
 
-        val secondVideoSequence =
-            EditedMediaItemSequence.withVideoFrom(
-                listOf(secondVideoItem)
-            )
+val secondVideoSequence =
+    EditedMediaItemSequence(
+        listOf(secondVideoItem)
+    )
 
-        // Preserve the original clip audio once, not once per speaker.
-        val audioItem = EditedMediaItem.Builder(mediaItem).build()
+val audioItem = EditedMediaItem.Builder(mediaItem)
+    .setRemoveVideo(true)
+    .build()
 
-        val audioSequence =
-            EditedMediaItemSequence.withAudioFrom(
-                listOf(audioItem)
-            )
+val audioSequence =
+    EditedMediaItemSequence(
+        listOf(audioItem)
+    )
 
         val composition = Composition.Builder(
             firstVideoSequence,
