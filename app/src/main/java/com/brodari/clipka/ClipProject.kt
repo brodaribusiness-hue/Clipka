@@ -127,15 +127,17 @@ import java.util.UUID
      }
  }
 
- if (frameLayout == "SPLIT_VERTICAL" && frames.size < 2) {
+  if (
+     frameLayout in setOf(
+         "SPLIT_VERTICAL",
+         "SPLIT_60_40",
+         "SPLIT_40_60",
+         "SPLIT_HORIZONTAL",
+         "SPLIT_DIAGONAL"
+     ) && frames.size < 2
+ ) {
      return ClipValidationResult.Invalid(
-         "Top-and-bottom split layout needs at least 2 frames."
-     )
- }
-
- if (frameLayout == "SPLIT_HORIZONTAL" && frames.size < 2) {
-     return ClipValidationResult.Invalid(
-         "Side-by-side split layout needs at least 2 frames."
+         "Split layouts need at least 2 frames."
      )
  }
 
