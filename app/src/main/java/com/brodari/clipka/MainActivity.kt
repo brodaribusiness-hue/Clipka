@@ -68,6 +68,7 @@ import androidx.media3.effect.Crop
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.EditedMediaItemSequence
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
@@ -244,6 +245,13 @@ private fun ClipkaScreen() {
                     )
                     .build()
 
+                
+                if (clipToExport.frameLayout == "SPLIT_DIAGONAL") {
+                    throw IllegalArgumentException(
+                        "Diagonal split export abhi supported nahi hai."
+                    )
+                }
+
                 val targetAspectRatio = when (clipToExport.aspectRatio) {
                     "9:16" -> 9f / 16f
                     "1:1" -> 1f
@@ -256,35 +264,103 @@ private fun ClipkaScreen() {
                     Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
                 )
 
-                val selectedFrame = clipToExport.frames.firstOrNull()
+                val splitLayouts = setOf(
+                    "SPLIT_VERTICAL",
+                    "SPLIT_60_40",
+                    "SPLIT_40_60",
+                    "SPLIT_HORIZONTAL"
+                )
 
-                val videoEffects = if (
-                    clipToExport.frameLayout == "SINGLE" &&
-                    selectedFrame != null
-                ) {
-                    val left = -1f + 2f * selectedFrame.x
-                    val right = -1f + 2f *
-                        (selectedFrame.x + selectedFrame.width)
-                    val top = 1f - 2f * selectedFrame.y
-                    val bottom = 1f - 2f *
-                        (selectedFrame.y + selectedFrame.height)
+                val isSplitLayout =
+                    clipToExport.frameLayout in splitLayouts
 
-                    listOf(
-                        Crop(left, right, bottom, top),
-                        presentationEffect
-                    )
-                } else {
-                    listOf(presentationEffect)
-                }
+                var editedMediaItem: EditedMediaItem? = null
+                var splitComposition: Composition? = null
 
-                val editedMediaItem = EditedMediaItem.Builder(clippedMediaItem)
-                    .setEffects(
-                        Effects(
-                            emptyList(),
-                            videoEffects
+                if (isSplitLayout) {
+                    if (clipToExport.frames.size < 2) {
+                        throw IllegalArgumentException(
+                            "Split-screen ke liye 2 frame regions zaroori hain."
                         )
+                    }
+
+                    fun makeVideoItem(frame: FrameRegion): EditedMediaItem {
+                        val left = -1f + 2f * frame.x
+                        val right = -1f + 2f * (frame.x + frame.width)
+                        val top = 1f - 2f * frame.y
+                        val bottom = 1f - 2f * (frame.y + frame.height)
+
+                        return EditedMediaItem.Builder(clippedMediaItem)
+                            .setRemoveAudio(true)
+                            .setEffects(
+                                Effects(
+                                    emptyList(),
+                                    listOf(Crop(left, right, bottom, top))
+                                )
+                            )
+                            .build()
+                    }
+
+                    val firstVideo = makeVideoItem(clipToExport.frames[0])
+                    val secondVideo = makeVideoItem(clipToExport.frames[1])
+
+                    val audioItem = EditedMediaItem.Builder(clippedMediaItem)
+                        .setRemoveVideo(true)
+                        .build()
+
+                    val firstSequence = EditedMediaItemSequence(
+                        listOf(firstVideo)
                     )
-                    .build()
+                    val secondSequence = EditedMediaItemSequence(
+                        listOf(secondVideo)
+                    )
+                    val audioSequence = EditedMediaItemSequence(
+                        listOf(audioItem)
+                    )
+
+                    splitComposition = Composition.Builder(
+                        firstSequence,
+                        secondSequence,
+                        audioSequence
+                    )
+                        .setVideoCompositorSettings(
+                            SplitScreenCompositorSettings(
+                                layout = clipToExport.frameLayout,
+                                aspectRatio = clipToExport.aspectRatio
+                            )
+                        )
+                        .build()
+                } else {
+                    val selectedFrame = clipToExport.frames.firstOrNull()
+
+                    val videoEffects = if (
+                        clipToExport.frameLayout == "SINGLE" &&
+                        selectedFrame != null
+                    ) {
+                        val left = -1f + 2f * selectedFrame.x
+                        val right = -1f + 2f *
+                            (selectedFrame.x + selectedFrame.width)
+                        val top = 1f - 2f * selectedFrame.y
+                        val bottom = 1f - 2f *
+                            (selectedFrame.y + selectedFrame.height)
+
+                        listOf(
+                            Crop(left, right, bottom, top),
+                            presentationEffect
+                        )
+                    } else {
+                        listOf(presentationEffect)
+                    }
+
+                    editedMediaItem = EditedMediaItem.Builder(clippedMediaItem)
+                        .setEffects(
+                            Effects(
+                                emptyList(),
+                                videoEffects
+                            )
+                        )
+                        .build()
+                }
 
                 val transformer = Transformer.Builder(context)
                     .addListener(object : Transformer.Listener {
@@ -347,10 +423,19 @@ private fun ClipkaScreen() {
 
                 activeTransformer = transformer
 
-                transformer.start(
-                    editedMediaItem,
-                    outputFile.absolutePath
-                )
+                val compositionToExport = splitComposition
+                if (compositionToExport != null) {
+                    transformer.start(
+                        compositionToExport,
+                        outputFile.absolutePath
+                    )
+                } else {
+                    transformer.start(
+                        checkNotNull(editedMediaItem),
+                        outputFile.absolutePath
+                    )
+                }
+
             } catch (exception: Exception) {
                 outputFile.delete()
                 isExporting = false
