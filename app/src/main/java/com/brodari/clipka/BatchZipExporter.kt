@@ -102,18 +102,19 @@ class BatchZipExporter(
     }
 
     private fun createVideoItem(
-        mediaItem: MediaItem,
-        frame: FrameRegion
-    ): EditedMediaItem {
-        return EditedMediaItem.Builder(mediaItem)
-            .setEffects(
-                Effects(
-                    emptyList(),
-                    listOf(createCrop(frame))
-                )
+    mediaItem: MediaItem,
+    frame: FrameRegion
+): EditedMediaItem {
+    return EditedMediaItem.Builder(mediaItem)
+        .setRemoveAudio(true)
+        .setEffects(
+            Effects(
+                emptyList(),
+                listOf(createCrop(frame))
             )
-            .build()
-    }
+        )
+        .build()
+}
 
     private fun exportNextClip() {
         if (finished) return
