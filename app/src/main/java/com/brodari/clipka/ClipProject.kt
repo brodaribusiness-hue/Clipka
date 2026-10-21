@@ -153,11 +153,14 @@ import java.util.UUID
  )
 
  val SUPPORTED_FRAME_LAYOUTS = setOf(
-     "SINGLE",
-     "SPLIT_VERTICAL",
-     "SPLIT_HORIZONTAL",
-     "CUSTOM"
- )
+    "SINGLE",
+    "SPLIT_VERTICAL",
+    "SPLIT_60_40",
+    "SPLIT_40_60",
+    "SPLIT_HORIZONTAL",
+    "SPLIT_DIAGONAL",
+    "CUSTOM"
+)
   
   }
   }
