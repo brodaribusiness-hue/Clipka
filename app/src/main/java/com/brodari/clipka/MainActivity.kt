@@ -334,9 +334,9 @@ private fun ClipkaScreen() {
                     val selectedFrame = clipToExport.frames.firstOrNull()
 
                     val videoEffects = if (
-                        clipToExport.frameLayout == "SINGLE" &&
-                        selectedFrame != null
-                    ) {
+    clipToExport.frameLayout in setOf("SINGLE", "CUSTOM") &&
+    selectedFrame != null
+) {
                         val left = -1f + 2f * selectedFrame.x
                         val right = -1f + 2f *
                             (selectedFrame.x + selectedFrame.width)
