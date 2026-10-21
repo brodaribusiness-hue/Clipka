@@ -8,10 +8,11 @@ import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Crop
-import androidx.media3.transformer.Effects
 import androidx.media3.effect.Presentation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
+import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
@@ -30,12 +31,14 @@ class BatchZipExporter(
 ) {
     private val handler = Handler(Looper.getMainLooper())
     private val tempFiles = mutableListOf<File>()
+
     private var activeTransformer: Transformer? = null
     private var currentIndex = 0
     private var finished = false
 
     fun start() {
         if (clips.isEmpty()) {
+            onProgress("No clips to export.")
             finish(null)
             return
         }
@@ -50,7 +53,66 @@ class BatchZipExporter(
             return
         }
 
+        val diagonalClip = clips.firstOrNull {
+            it.frameLayout == "SPLIT_DIAGONAL"
+        }
+
+        if (diagonalClip != null) {
+            onProgress(
+                "Diagonal split export is not supported yet: " +
+                    diagonalClip.name
+            )
+            finish(null)
+            return
+        }
+
         exportNextClip()
+    }
+
+    private fun createClippedMediaItem(
+        clip: ClipSegment
+    ): MediaItem {
+        return MediaItem.Builder()
+            .setUri(sourceUri)
+            .setClippingConfiguration(
+                MediaItem.ClippingConfiguration.Builder()
+                    .setStartPositionMs(clip.startMs)
+                    .setEndPositionMs(clip.endMs)
+                    .build()
+            )
+            .build()
+    }
+
+    private fun getTargetRatio(clip: ClipSegment): Float {
+        return when (clip.aspectRatio) {
+            "9:16" -> 9f / 16f
+            "1:1" -> 1f
+            "16:9" -> 16f / 9f
+            else -> 9f / 16f
+        }
+    }
+
+    private fun createCrop(frame: FrameRegion): Crop {
+        val left = -1f + 2f * frame.x
+        val right = -1f + 2f * (frame.x + frame.width)
+        val top = 1f - 2f * frame.y
+        val bottom = 1f - 2f * (frame.y + frame.height)
+
+        return Crop(left, right, bottom, top)
+    }
+
+    private fun createVideoItem(
+        mediaItem: MediaItem,
+        frame: FrameRegion
+    ): EditedMediaItem {
+        return EditedMediaItem.Builder(mediaItem)
+            .setEffects(
+                Effects(
+                    emptyList(),
+                    listOf(createCrop(frame))
+                )
+            )
+            .build()
     }
 
     private fun exportNextClip() {
@@ -62,6 +124,7 @@ class BatchZipExporter(
         }
 
         val clip = clips[currentIndex]
+
         val outputFile = File(
             context.cacheDir,
             "clipka_batch_${System.currentTimeMillis()}_$currentIndex.mp4"
@@ -70,51 +133,12 @@ class BatchZipExporter(
         tempFiles.add(outputFile)
 
         try {
-            onProgress("Exporting ${currentIndex + 1}/${clips.size}: ${clip.name}")
-
-            val mediaItem = MediaItem.Builder()
-                .setUri(sourceUri)
-                .setClippingConfiguration(
-                    MediaItem.ClippingConfiguration.Builder()
-                        .setStartPositionMs(clip.startMs)
-                        .setEndPositionMs(clip.endMs)
-                        .build()
-                )
-                .build()
-
-            val targetRatio = when (clip.aspectRatio) {
-                "9:16" -> 9f / 16f
-                "1:1" -> 1f
-                "16:9" -> 16f / 9f
-                else -> 9f / 16f
-            }
-
-            val presentation = Presentation.createForAspectRatio(
-                targetRatio,
-                Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
+            onProgress(
+                "Exporting ${currentIndex + 1}/${clips.size}: ${clip.name}"
             )
 
-            val frame = clip.frames.firstOrNull()
-
-            val videoEffects = if (
-                clip.frameLayout == "SINGLE" && frame != null
-            ) {
-                val left = -1f + 2f * frame.x
-                val right = -1f + 2f * (frame.x + frame.width)
-                val top = 1f - 2f * frame.y
-                val bottom = 1f - 2f * (frame.y + frame.height)
-
-                listOf(
-                    Crop(left, right, bottom, top),
-                    presentation
-                )
-            } else {
-                listOf(presentation)
-            }
-
-            val editedItem = EditedMediaItem.Builder(mediaItem)
-                .setEffects(Effects(emptyList(), videoEffects))
-                .build()
+            val mediaItem = createClippedMediaItem(clip)
+            val targetRatio = getTargetRatio(clip)
 
             val transformer = Transformer.Builder(context)
                 .addListener(object : Transformer.Listener {
@@ -123,6 +147,9 @@ class BatchZipExporter(
                         exportResult: ExportResult
                     ) {
                         activeTransformer = null
+
+                        if (finished) return
+
                         currentIndex++
                         exportNextClip()
                     }
@@ -133,23 +160,157 @@ class BatchZipExporter(
                         exportException: ExportException
                     ) {
                         activeTransformer = null
+
                         onProgress(
                             "Failed: ${clip.name} — " +
-                                (exportException.message ?: "Export error")
+                                (
+                                    exportException.message
+                                        ?: "Export error"
+                                )
                         )
+
                         finish(null)
                     }
                 })
                 .build()
 
             activeTransformer = transformer
-            transformer.start(editedItem, outputFile.absolutePath)
+
+            when (clip.frameLayout) {
+                "SPLIT_VERTICAL",
+                "SPLIT_60_40",
+                "SPLIT_40_60",
+                "SPLIT_HORIZONTAL" -> {
+                    exportSplitClip(
+                        transformer = transformer,
+                        mediaItem = mediaItem,
+                        clip = clip,
+                        outputFile = outputFile,
+                        targetRatio = targetRatio
+                    )
+                }
+
+                else -> {
+                    exportSingleClip(
+                        transformer = transformer,
+                        mediaItem = mediaItem,
+                        clip = clip,
+                        outputFile = outputFile,
+                        targetRatio = targetRatio
+                    )
+                }
+            }
         } catch (error: Exception) {
             onProgress(
-                "Failed: ${clip.name} — ${error.message ?: "Unknown error"}"
+                "Failed: ${clip.name} — " +
+                    (error.message ?: "Unknown error")
             )
             finish(null)
         }
+    }
+
+    private fun exportSingleClip(
+        transformer: Transformer,
+        mediaItem: MediaItem,
+        clip: ClipSegment,
+        outputFile: File,
+        targetRatio: Float
+    ) {
+        val presentation = Presentation.createForAspectRatio(
+            targetRatio,
+            Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
+        )
+
+        val frame = clip.frames.firstOrNull()
+
+        val videoEffects = if (
+            clip.frameLayout == "SINGLE" && frame != null
+        ) {
+            listOf(
+                createCrop(frame),
+                presentation
+            )
+        } else {
+            listOf(presentation)
+        }
+
+        val editedItem = EditedMediaItem.Builder(mediaItem)
+            .setEffects(
+                Effects(
+                    emptyList(),
+                    videoEffects
+                )
+            )
+            .build()
+
+        transformer.start(
+            editedItem,
+            outputFile.absolutePath
+        )
+    }
+
+    private fun exportSplitClip(
+        transformer: Transformer,
+        mediaItem: MediaItem,
+        clip: ClipSegment,
+        outputFile: File,
+        targetRatio: Float
+    ) {
+        if (clip.frames.size < 2) {
+            throw IllegalArgumentException(
+                "Split-screen export needs two frame regions."
+            )
+        }
+
+        val firstFrame = clip.frames[0]
+        val secondFrame = clip.frames[1]
+
+        val firstVideoItem = createVideoItem(
+            mediaItem,
+            firstFrame
+        )
+
+        val secondVideoItem = createVideoItem(
+            mediaItem,
+            secondFrame
+        )
+
+        // Video-only sequences keep each speaker in a separate layer.
+        val firstVideoSequence =
+            EditedMediaItemSequence.withVideoFrom(
+                listOf(firstVideoItem)
+            )
+
+        val secondVideoSequence =
+            EditedMediaItemSequence.withVideoFrom(
+                listOf(secondVideoItem)
+            )
+
+        // Preserve the original clip audio once, not once per speaker.
+        val audioItem = EditedMediaItem.Builder(mediaItem).build()
+
+        val audioSequence =
+            EditedMediaItemSequence.withAudioFrom(
+                listOf(audioItem)
+            )
+
+        val composition = Composition.Builder(
+            firstVideoSequence,
+            secondVideoSequence,
+            audioSequence
+        )
+            .setVideoCompositorSettings(
+                SplitScreenCompositorSettings(
+                    layout = clip.frameLayout,
+                    aspectRatio = clip.aspectRatio
+                )
+            )
+            .build()
+
+        transformer.start(
+            composition,
+            outputFile.absolutePath
+        )
     }
 
     private fun createZip() {
@@ -161,15 +322,18 @@ class BatchZipExporter(
                 "Clipka_Clips_${System.currentTimeMillis()}.zip"
             )
 
-            ZipOutputStream(FileOutputStream(zipFile)).use { zip ->
+            ZipOutputStream(
+                FileOutputStream(zipFile)
+            ).use { zip ->
                 tempFiles.forEachIndexed { index, file ->
-                    if (!file.exists()) {
+                    if (!file.exists() || file.length() == 0L) {
                         throw IllegalStateException(
-                            "Exported clip file is missing."
+                            "Exported clip file is missing or empty."
                         )
                     }
 
                     val clip = clips[index]
+
                     val safeName = clip.name
                         .replace(Regex("[^A-Za-z0-9_-]"), "_")
                         .ifBlank { "Clip_${index + 1}" }
@@ -197,16 +361,19 @@ class BatchZipExporter(
 
     private fun finish(result: File?) {
         if (finished) return
-        finished = true
 
+        finished = true
         activeTransformer = null
 
         tempFiles.forEach { it.delete() }
 
         handler.post {
             if (result != null) {
-                onProgress("ZIP ready: ${clips.size} clips exported.")
+                onProgress(
+                    "ZIP ready: ${clips.size} clips exported."
+                )
             }
+
             onComplete(result)
         }
     }
@@ -217,6 +384,7 @@ class BatchZipExporter(
         try {
             activeTransformer?.cancel()
         } catch (_: Exception) {
+            // Continue with cleanup if cancellation throws.
         }
 
         finish(null)
