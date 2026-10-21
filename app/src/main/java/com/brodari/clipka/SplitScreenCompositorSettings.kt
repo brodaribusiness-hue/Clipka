@@ -1,4 +1,3 @@
-
 package com.brodari.clipka
 
 import androidx.media3.common.OverlaySettings
@@ -36,6 +35,30 @@ class SplitScreenCompositorSettings(
                         0f,
                         if (inputId == 0) 0.5f else -0.5f
                     )
+            }
+
+            "SPLIT_60_40" -> {
+                if (inputId == 0) {
+                    settings
+                        .setScale(1f, 0.6f)
+                        .setBackgroundFrameAnchor(0f, 0.4f)
+                } else {
+                    settings
+                        .setScale(1f, 0.4f)
+                        .setBackgroundFrameAnchor(0f, -0.6f)
+                }
+            }
+
+            "SPLIT_40_60" -> {
+                if (inputId == 0) {
+                    settings
+                        .setScale(1f, 0.4f)
+                        .setBackgroundFrameAnchor(0f, 0.6f)
+                } else {
+                    settings
+                        .setScale(1f, 0.6f)
+                        .setBackgroundFrameAnchor(0f, -0.4f)
+                }
             }
 
             "SPLIT_HORIZONTAL" -> {
