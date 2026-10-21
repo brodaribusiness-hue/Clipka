@@ -1,4 +1,3 @@
-
 package com.brodari.clipka
 
 import android.content.Context
@@ -18,14 +17,14 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 /**
- * Detects faces at multiple points in a clip.
+ * Local on-device face detection for Clipka.
  *
- * All processing happens locally on the device.
- * Video frames are not uploaded to a server.
+ * Samples the complete clip, groups detections by position,
+ * and averages detected regions to reduce unstable crop positions.
  */
 object ClipkaFaceDetection {
 
-    private const val SAMPLE_COUNT = 5
+    private const val SAMPLE_COUNT = 12
     private const val FACE_MATCH_DISTANCE = 0.18f
 
     private data class FaceCluster(
@@ -49,6 +48,7 @@ object ClipkaFaceDetection {
 
         fun averageBounds(): RectF {
             val divisor = count.toFloat()
+
             return RectF(
                 leftTotal / divisor,
                 topTotal / divisor,
@@ -72,10 +72,27 @@ object ClipkaFaceDetection {
 
         val retriever = MediaMetadataRetriever()
         val clusters = mutableListOf<FaceCluster>()
+
         var processedFrames = 0
+        var videoWidth = 0
+        var videoHeight = 0
 
         try {
             retriever.setDataSource(context, videoUri)
+
+            videoWidth = retriever.extractMetadata(
+                MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
+            )?.toIntOrNull() ?: 0
+
+            videoHeight = retriever.extractMetadata(
+                MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
+            )?.toIntOrNull() ?: 0
+
+            if (videoWidth <= 0 || videoHeight <= 0) {
+                throw IllegalStateException(
+                    "Could not read video dimensions."
+                )
+            }
 
             val options = FaceDetectorOptions.Builder()
                 .setPerformanceMode(
@@ -90,8 +107,14 @@ object ClipkaFaceDetection {
                 val clipLengthMs = endMs - startMs
 
                 for (sampleIndex in 0 until SAMPLE_COUNT) {
+
+                    // Include the beginning and end of the clip.
                     val sampleMs = startMs +
-                        (clipLengthMs * sampleIndex / SAMPLE_COUNT)
+                        (
+                            clipLengthMs *
+                                sampleIndex /
+                                (SAMPLE_COUNT - 1)
+                            )
 
                     var bitmap: Bitmap? = null
 
@@ -160,32 +183,41 @@ object ClipkaFaceDetection {
                             val faceCenterY =
                                 (bounds.top + bounds.bottom) / 2f
 
-                            val matchingCluster = clusters.minByOrNull {
-                                cluster ->
-                                val average = cluster.averageBounds()
-                                val clusterCenterX =
-                                    (average.left + average.right) / 2f
-                                val clusterCenterY =
-                                    (average.top + average.bottom) / 2f
+                            val matchingCluster =
+                                clusters.minByOrNull { cluster ->
+                                    val average =
+                                        cluster.averageBounds()
 
-                                val dx = faceCenterX - clusterCenterX
-                                val dy = faceCenterY - clusterCenterY
+                                    val clusterCenterX =
+                                        (average.left + average.right) / 2f
+                                    val clusterCenterY =
+                                        (average.top + average.bottom) / 2f
 
-                                sqrt(dx * dx + dy * dy) /
-                                    imageDiagonal
-                            }?.takeIf { cluster ->
-                                val average = cluster.averageBounds()
-                                val clusterCenterX =
-                                    (average.left + average.right) / 2f
-                                val clusterCenterY =
-                                    (average.top + average.bottom) / 2f
+                                    val dx =
+                                        faceCenterX - clusterCenterX
+                                    val dy =
+                                        faceCenterY - clusterCenterY
 
-                                val dx = faceCenterX - clusterCenterX
-                                val dy = faceCenterY - clusterCenterY
+                                    sqrt(dx * dx + dy * dy) /
+                                        imageDiagonal
+                                }?.takeIf { cluster ->
+                                    val average =
+                                        cluster.averageBounds()
 
-                                sqrt(dx * dx + dy * dy) /
-                                    imageDiagonal <= FACE_MATCH_DISTANCE
-                            }
+                                    val clusterCenterX =
+                                        (average.left + average.right) / 2f
+                                    val clusterCenterY =
+                                        (average.top + average.bottom) / 2f
+
+                                    val dx =
+                                        faceCenterX - clusterCenterX
+                                    val dy =
+                                        faceCenterY - clusterCenterY
+
+                                    sqrt(dx * dx + dy * dy) /
+                                        imageDiagonal <=
+                                        FACE_MATCH_DISTANCE
+                                }
 
                             if (matchingCluster != null) {
                                 matchingCluster.add(bounds)
@@ -198,7 +230,8 @@ object ClipkaFaceDetection {
                                         bottomTotal = bounds.bottom,
                                         count = 1,
                                         largestArea =
-                                            bounds.width() * bounds.height()
+                                            bounds.width() *
+                                                bounds.height()
                                     )
                                 )
                             }
@@ -230,8 +263,11 @@ object ClipkaFaceDetection {
                 createFrameRegion(
                     bounds = cluster.averageBounds(),
                     index = index,
-                    imageWidth = getVideoWidth(context, videoUri),
-                    imageHeight = getVideoHeight(context, videoUri)
+                    imageWidth = videoWidth,
+                    imageHeight = videoHeight,
+                    confidence = (
+                        cluster.count.toFloat() / SAMPLE_COUNT
+                        ).coerceIn(0f, 1f)
                 )
             }
     }
@@ -240,12 +276,14 @@ object ClipkaFaceDetection {
         bounds: RectF,
         index: Int,
         imageWidth: Int,
-        imageHeight: Int
+        imageHeight: Int,
+        confidence: Float
     ): FrameRegion {
+
         val safeWidth = imageWidth.coerceAtLeast(1).toFloat()
         val safeHeight = imageHeight.coerceAtLeast(1).toFloat()
 
-        // Add room around the face so the crop includes more than the face.
+        // Leave space around the face for a more natural crop.
         val extraX = bounds.width() * 0.45f
         val extraY = bounds.height() * 0.75f
 
@@ -269,47 +307,8 @@ object ClipkaFaceDetection {
             y = y,
             width = width,
             height = height,
-            detectedFace = true
+            detectedFace = true,
+            detectionConfidence = confidence
         )
-    }
-
-    private fun getVideoWidth(
-        context: Context,
-        videoUri: Uri
-    ): Int {
-        return getVideoDimension(
-            context,
-            videoUri,
-            MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH
-        )
-    }
-
-    private fun getVideoHeight(
-        context: Context,
-        videoUri: Uri
-    ): Int {
-        return getVideoDimension(
-            context,
-            videoUri,
-            MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT
-        )
-    }
-
-    private fun getVideoDimension(
-        context: Context,
-        videoUri: Uri,
-        metadataKey: Int
-    ): Int {
-        val retriever = MediaMetadataRetriever()
-
-        return try {
-            retriever.setDataSource(context, videoUri)
-            retriever.extractMetadata(metadataKey)
-                ?.toIntOrNull()
-                ?.coerceAtLeast(1)
-                ?: 1
-        } finally {
-            retriever.release()
-        }
     }
 }
