@@ -225,8 +225,9 @@ class BatchZipExporter(
         val frame = clip.frames.firstOrNull()
 
         val videoEffects = if (
-            clip.frameLayout == "SINGLE" && frame != null
-        ) {
+    clip.frameLayout in setOf("SINGLE", "CUSTOM") &&
+    frame != null
+) {
             listOf(
                 createCrop(frame),
                 presentation
