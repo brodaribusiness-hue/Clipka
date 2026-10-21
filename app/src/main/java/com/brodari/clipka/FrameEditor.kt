@@ -48,30 +48,105 @@ fun FrameEditor(
             color = Color.White
         )
 
-        Text(
-            text = "Adjust frame position and size. " +
-                "Changes are applied when you finish moving a slider.",
-            color = Color.LightGray
-        )
+        
+        fun selectLayout(layout: String) {
+            val presetFrames = when (layout) {
+                "SPLIT_VERTICAL" -> listOf(
+                    FrameRegion(
+                        name = "Speaker 1",
+                        x = 0f, y = 0f,
+                        width = 1f, height = 0.5f
+                    ),
+                    FrameRegion(
+                        name = "Speaker 2",
+                        x = 0f, y = 0.5f,
+                        width = 1f, height = 0.5f
+                    )
+                )
 
-        Text("Layout", color = Color.White)
+                "SPLIT_60_40" -> listOf(
+                    FrameRegion(
+                        name = "Speaker 1",
+                        x = 0f, y = 0f,
+                        width = 1f, height = 0.6f
+                    ),
+                    FrameRegion(
+                        name = "Speaker 2",
+                        x = 0f, y = 0.6f,
+                        width = 1f, height = 0.4f
+                    )
+                )
+
+                "SPLIT_40_60" -> listOf(
+                    FrameRegion(
+                        name = "Speaker 1",
+                        x = 0f, y = 0f,
+                        width = 1f, height = 0.4f
+                    ),
+                    FrameRegion(
+                        name = "Speaker 2",
+                        x = 0f, y = 0.4f,
+                        width = 1f, height = 0.6f
+                    )
+                )
+
+                "SPLIT_HORIZONTAL" -> listOf(
+                    FrameRegion(
+                        name = "Speaker 1",
+                        x = 0f, y = 0f,
+                        width = 0.5f, height = 1f
+                    ),
+                    FrameRegion(
+                        name = "Speaker 2",
+                        x = 0.5f, y = 0f,
+                        width = 0.5f, height = 1f
+                    )
+                )
+
+                "SPLIT_DIAGONAL" -> listOf(
+                    FrameRegion(
+                        name = "Speaker 1",
+                        x = 0f, y = 0f,
+                        width = 1f, height = 0.5f
+                    ),
+                    FrameRegion(
+                        name = "Speaker 2",
+                        x = 0f, y = 0.5f,
+                        width = 1f, height = 0.5f
+                    )
+                )
+
+                else -> clip.frames
+            }
+
+            if (layout.startsWith("SPLIT_")) {
+                onFramesChange(presetFrames)
+            }
+            onLayoutChange(layout)
+        }
+
+        Text("Layout — Vertical 9:16", color = Color.White)
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             LayoutButton(
-                label = "Single",
-                selected = clip.frameLayout == "SINGLE",
-                onClick = { onLayoutChange("SINGLE") },
+                label = "50/50",
+                selected = clip.frameLayout == "SPLIT_VERTICAL",
+                onClick = { selectLayout("SPLIT_VERTICAL") },
                 modifier = Modifier.weight(1f)
             )
-
             LayoutButton(
-                label = "Top/Bottom",
-                selected = clip.frameLayout == "SPLIT_VERTICAL",
-                enabled = clip.frames.size >= 2,
-                onClick = { onLayoutChange("SPLIT_VERTICAL") },
+                label = "60/40",
+                selected = clip.frameLayout == "SPLIT_60_40",
+                onClick = { selectLayout("SPLIT_60_40") },
+                modifier = Modifier.weight(1f)
+            )
+            LayoutButton(
+                label = "40/60",
+                selected = clip.frameLayout == "SPLIT_40_60",
+                onClick = { selectLayout("SPLIT_40_60") },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -81,12 +156,37 @@ fun FrameEditor(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             LayoutButton(
-                label = "Side-by-side",
+                label = "Side-by-Side",
                 selected = clip.frameLayout == "SPLIT_HORIZONTAL",
-                enabled = clip.frames.size >= 2,
-                onClick = { onLayoutChange("SPLIT_HORIZONTAL") },
+                onClick = { selectLayout("SPLIT_HORIZONTAL") },
                 modifier = Modifier.weight(1f)
             )
+            LayoutButton(
+                label = "Diagonal",
+                selected = clip.frameLayout == "SPLIT_DIAGONAL",
+                onClick = { selectLayout("SPLIT_DIAGONAL") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            LayoutButton(
+                label = "Single",
+                selected = clip.frameLayout == "SINGLE",
+                onClick = { selectLayout("SINGLE") },
+                modifier = Modifier.weight(1f)
+            )
+            LayoutButton(
+                label = "Custom",
+                selected = clip.frameLayout == "CUSTOM",
+                onClick = { selectLayout("CUSTOM") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+
 
             LayoutButton(
                 label = "Custom",
