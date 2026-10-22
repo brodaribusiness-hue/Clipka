@@ -64,27 +64,41 @@ object ClipProjectStorage {
             })
         }
 
+        
         val destination = projectFile(context)
         val temporary = File(
             context.filesDir,
             "$FILE_NAME.tmp"
         )
 
-        temporary.writeText(
-            root.toString(2),
-            Charsets.UTF_8
-        )
+        try {
+            temporary.writeText(
+                root.toString(2),
+                Charsets.UTF_8
+            )
 
-        if (destination.exists() && !destination.delete()) {
-            temporary.delete()
-            error("Existing project file replace nahi ho saki.")
+            try {
+                java.nio.file.Files.move(
+                    temporary.toPath(),
+                    destination.toPath(),
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                )
+            } catch (
+                _: java.nio.file.AtomicMoveNotSupportedException
+            ) {
+                java.nio.file.Files.move(
+                    temporary.toPath(),
+                    destination.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                )
+            }
+        } finally {
+            if (temporary.exists()) {
+                temporary.delete()
+            }
         }
 
-        if (!temporary.renameTo(destination)) {
-            temporary.copyTo(destination, overwrite = true)
-            temporary.delete()
-        }
-    }
 
     fun load(
         context: Context
