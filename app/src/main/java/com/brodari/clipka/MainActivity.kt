@@ -184,6 +184,91 @@ var projectStatus by remember { mutableStateOf("") }
         }
     }
 
+    
+    fun saveProject() {
+        val sourceUri = videoUri
+
+        if (sourceUri == null) {
+            projectStatus = "Pehle video select karo."
+            return
+        }
+
+        val project = ClipProject(
+            name = "Clipka Project",
+            sourceVideoUri = sourceUri.toString(),
+            sourceDurationMs = durationMs,
+            clips = clips.toList(),
+            selectedClipId = selectedClipId
+        )
+
+        ClipProjectStorage.save(context, project)
+            .onSuccess {
+                projectStatus = "Project locally save ho gaya."
+            }
+            .onFailure { error ->
+                projectStatus =
+                    "Save failed: ${error.message ?: "Unknown error"}"
+            }
+    }
+
+    fun loadProject() {
+        ClipProjectStorage.load(context)
+            .onSuccess { project ->
+                if (project == null) {
+                    projectStatus = "Abhi koi saved project nahi hai."
+                } else {
+                    val restoredUri = project.sourceVideoUri
+                        ?.let { Uri.parse(it) }
+
+                    try {
+                        if (restoredUri != null) {
+                            exoPlayer.setMediaItem(
+                                MediaItem.fromUri(restoredUri)
+                            )
+                            exoPlayer.prepare()
+                            exoPlayer.pause()
+                        } else {
+                            exoPlayer.clearMediaItems()
+                        }
+
+                        videoUri = restoredUri
+                        videoName = restoredUri
+                            ?.lastPathSegment
+                            ?.substringAfterLast('/')
+                            ?: "No video selected"
+
+                        clips = project.clips
+                        selectedClipId = project.selectedClipId
+                            ?.takeIf { id ->
+                                project.clips.any { it.id == id }
+                            }
+
+                        previewingClipId = null
+                        durationMs = project.sourceDurationMs
+                        positionMs = 0L
+                        isPlaying = false
+                        isSeeking = false
+                        seekValue = 0f
+                        undoStack = emptyList()
+                        redoStack = emptyList()
+                        startInput = "00:00"
+                        endInput = "00:30"
+                        clipError = ""
+                        exportStatus = ""
+
+                        projectStatus = "Saved project load ho gaya."
+                    } catch (error: Exception) {
+                        projectStatus =
+                            "Load failed: ${error.message ?: "Video access error"}"
+                    }
+                }
+            }
+            .onFailure { error ->
+                projectStatus =
+                    "Load failed: ${error.message ?: "Unknown error"}"
+            }
+    }
+
     val videoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { selectedUri: Uri? ->
@@ -890,6 +975,50 @@ var projectStatus by remember { mutableStateOf("") }
                             }
                         }
                     }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { saveProject() },
+                            enabled = videoUri != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text("Save Project")
+                        }
+
+                        OutlinedButton(
+                            onClick = { loadProject() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text("Load Project")
+                        }
+                    }
+
+                    if (projectStatus.isNotEmpty()) {
+                        Text(
+                            text = projectStatus,
+                            color = if (
+                                projectStatus.contains(
+                                    "failed",
+                                    ignoreCase = true
+                                )
+                            ) {
+                                Color(0xFFFF8A80)
+                            } else {
+                                ClipkaAccent
+                            },
+                            fontSize = 12.sp
+                        )
+                    }
+
 
                     Button(
                         onClick = {
