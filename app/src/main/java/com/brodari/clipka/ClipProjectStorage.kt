@@ -98,6 +98,7 @@ object ClipProjectStorage {
                 temporary.delete()
             }
         }
+    } 
 
 
     fun load(
