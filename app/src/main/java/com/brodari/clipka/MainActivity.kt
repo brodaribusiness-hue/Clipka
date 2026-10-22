@@ -189,9 +189,10 @@ var projectStatus by remember { mutableStateOf("") }
     ) { selectedUri: Uri? ->
                 if (selectedUri != null) {
             try {
-                contentResolver.takePersistableUriPermission(
-                    selectedUri,
-                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(
+    selectedUri,
+    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+)
                 )
             } catch (_: SecurityException) {
                 // Continue if persistent permission is unavailable.
