@@ -193,7 +193,6 @@ var projectStatus by remember { mutableStateOf("") }
     selectedUri,
     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
 )
-                )
             } catch (_: SecurityException) {
                 // Continue if persistent permission is unavailable.
             }
