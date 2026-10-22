@@ -878,14 +878,13 @@ var projectStatus by remember { mutableStateOf("") }
                             )
 
                             if (previewClip != null && previewClip.frames.isNotEmpty()) {
-                                FramePreviewOverlay(
-    frames = previewClip.frames,
-    modifier = Modifier.fillMaxSize(),
-    sourceVideoAspectRatio = sourceVideoAspectRatio,
-    targetAspectRatio = previewRatio
-)
-                                )
-                            }
+    FramePreviewOverlay(
+        frames = previewClip.frames,
+        modifier = Modifier.fillMaxSize(),
+        sourceVideoAspectRatio = sourceVideoAspectRatio,
+        targetAspectRatio = previewRatio
+    )
+}
                         }
                     }
                 }
