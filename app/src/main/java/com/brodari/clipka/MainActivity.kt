@@ -121,6 +121,9 @@ private fun ClipkaScreen() {
     var selectedClipId by remember { mutableStateOf<String?>(null) }
     var previewingClipId by remember { mutableStateOf<String?>(null) }
 
+    var sourceVideoAspectRatio by remember {
+    mutableStateOf(16f / 9f)
+    }
     var clipError by remember { mutableStateOf("") }
 var exportStatus by remember { mutableStateOf("") }
 var faceDetectionStatus by remember { mutableStateOf("") }
@@ -601,6 +604,16 @@ var projectStatus by remember { mutableStateOf("") }
                 isPlaying = playing
             }
 
+            override fun onVideoSizeChanged(
+    videoSize: androidx.media3.common.VideoSize
+) {
+    if (videoSize.height > 0 && videoSize.width > 0) {
+        sourceVideoAspectRatio =
+            videoSize.width.toFloat() *
+                videoSize.pixelWidthHeightRatio /
+                videoSize.height.toFloat()
+    }
+}
             override fun onPlaybackStateChanged(playbackState: Int) {
                 val actualDuration = exoPlayer.duration
                 if (actualDuration > 0L) {
@@ -866,8 +879,11 @@ var projectStatus by remember { mutableStateOf("") }
 
                             if (previewClip != null && previewClip.frames.isNotEmpty()) {
                                 FramePreviewOverlay(
-                                    frames = previewClip.frames,
-                                    modifier = Modifier.fillMaxSize()
+    frames = previewClip.frames,
+    modifier = Modifier.fillMaxSize(),
+    sourceVideoAspectRatio = sourceVideoAspectRatio,
+    targetAspectRatio = previewRatio
+)
                                 )
                             }
                         }
