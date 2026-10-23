@@ -2278,6 +2278,7 @@ applyClipChange(
             }
 
 
+                        
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
@@ -2326,9 +2327,6 @@ applyClipChange(
         }
     }
 }
-
-private fun validateClipTimes(
-            
 
 private fun validateClipTimes(
     startMs: Long?,
@@ -2398,4 +2396,5 @@ private fun formatTime(milliseconds: Long): String {
         "%02d:%02d".format(minutes, seconds)
     }
 }
+
                         
