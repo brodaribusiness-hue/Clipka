@@ -1340,10 +1340,9 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                     Divider(color = Color.DarkGray)
 
                     Text(
-                        "Export every clip together in one ZIP archive."
-                        color = Color.LightGray,
-                        fontSize = 12.sp
-                    )
+    "Export every clip together in one ZIP archive.",
+    color = Color.LightGray,
+                       ) 
 
                     OutlinedButton(
                         onClick = {
@@ -1452,9 +1451,10 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                         letterSpacing = 1.sp
                     )
 
-                    Text(
-                        "Trim, organize and prepare clips for export"
-                        color = Color.White,
+                 
+                        Text(
+    "Trim, organize and prepare clips for export",
+    color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1727,10 +1727,8 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                         )
 
                         Text(
-                         "Choose a video, set start and end times, then tap Add Clip."
-                            color = Color.LightGray,
-                            fontSize = 13.sp
-                        )
+    "Choose a video, set start and end times, then tap Add Clip.",
+    color = Color.LightGray,
                     }
                 }
             }
