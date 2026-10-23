@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,103 +42,20 @@ fun FrameEditor(
     onLayoutChange: (String) -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Frame Editor — ${clip.name}",
-            color = Color.White
+            text = "FRAME EDITOR · ${clip.name}",
+            color = FrameEditorAccent
         )
 
-        
-        fun selectLayout(layout: String) {
-            val presetFrames = when (layout) {
-                "SPLIT_VERTICAL" -> listOf(
-                    FrameRegion(
-                        name = "Speaker 1",
-                        x = 0f, y = 0f,
-                        width = 1f, height = 0.5f
-                    ),
-                    FrameRegion(
-                        name = "Speaker 2",
-                        x = 0f, y = 0.5f,
-                        width = 1f, height = 0.5f
-                    )
-                )
-
-                "SPLIT_60_40" -> listOf(
-                    FrameRegion(
-                        name = "Speaker 1",
-                        x = 0f, y = 0f,
-                        width = 1f, height = 0.6f
-                    ),
-                    FrameRegion(
-                        name = "Speaker 2",
-                        x = 0f, y = 0.6f,
-                        width = 1f, height = 0.4f
-                    )
-                )
-
-                "SPLIT_40_60" -> listOf(
-                    FrameRegion(
-                        name = "Speaker 1",
-                        x = 0f, y = 0f,
-                        width = 1f, height = 0.4f
-                    ),
-                    FrameRegion(
-                        name = "Speaker 2",
-                        x = 0f, y = 0.4f,
-                        width = 1f, height = 0.6f
-                    )
-                )
-
-                "SPLIT_HORIZONTAL" -> listOf(
-                    FrameRegion(
-                        name = "Speaker 1",
-                        x = 0f, y = 0f,
-                        width = 0.5f, height = 1f
-                    ),
-                    FrameRegion(
-                        name = "Speaker 2",
-                        x = 0.5f, y = 0f,
-                        width = 0.5f, height = 1f
-                    )
-                )
-
-                "SPLIT_DIAGONAL" -> listOf(
-                    FrameRegion(
-                        name = "Speaker 1",
-                        x = 0f, y = 0f,
-                        width = 1f, height = 0.5f
-                    ),
-                    FrameRegion(
-                        name = "Speaker 2",
-                        x = 0f, y = 0.5f,
-                        width = 1f, height = 0.5f
-                    )
-                )
-
-                else -> clip.frames
-            }
-
-                        if (layout.startsWith("SPLIT_")) {
-                val detectedSpeakerFrames = clip.frames
-                    .filter { it.detectedFace }
-                    .take(2)
-
-                val framesToUse =
-                    if (detectedSpeakerFrames.size >= 2) {
-                        detectedSpeakerFrames
-                    } else {
-                        presetFrames
-                    }
-
-                onFramesChange(framesToUse)
-            }
-            onLayoutChange(layout)
-        }
-
-        Text("Layout — Vertical 9:16", color = Color.White)
+        Text(
+            text = "Vertical split-screen layouts",
+            color = Color.White
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -145,19 +64,40 @@ fun FrameEditor(
             LayoutButton(
                 label = "50/50",
                 selected = clip.frameLayout == "SPLIT_VERTICAL",
-                onClick = { selectLayout("SPLIT_VERTICAL") },
+                onClick = {
+                    selectPreset(
+                        clip,
+                        "SPLIT_VERTICAL",
+                        onFramesChange,
+                        onLayoutChange
+                    )
+                },
                 modifier = Modifier.weight(1f)
             )
             LayoutButton(
                 label = "60/40",
                 selected = clip.frameLayout == "SPLIT_60_40",
-                onClick = { selectLayout("SPLIT_60_40") },
+                onClick = {
+                    selectPreset(
+                        clip,
+                        "SPLIT_60_40",
+                        onFramesChange,
+                        onLayoutChange
+                    )
+                },
                 modifier = Modifier.weight(1f)
             )
             LayoutButton(
                 label = "40/60",
                 selected = clip.frameLayout == "SPLIT_40_60",
-                onClick = { selectLayout("SPLIT_40_60") },
+                onClick = {
+                    selectPreset(
+                        clip,
+                        "SPLIT_40_60",
+                        onFramesChange,
+                        onLayoutChange
+                    )
+                },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -167,15 +107,29 @@ fun FrameEditor(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             LayoutButton(
-                label = "Side-by-Side",
+                label = "Side-by-side",
                 selected = clip.frameLayout == "SPLIT_HORIZONTAL",
-                onClick = { selectLayout("SPLIT_HORIZONTAL") },
+                onClick = {
+                    selectPreset(
+                        clip,
+                        "SPLIT_HORIZONTAL",
+                        onFramesChange,
+                        onLayoutChange
+                    )
+                },
                 modifier = Modifier.weight(1f)
             )
             LayoutButton(
-                label = "Diagonal",
+                label = "Diagonal*",
                 selected = clip.frameLayout == "SPLIT_DIAGONAL",
-                onClick = { selectLayout("SPLIT_DIAGONAL") },
+                onClick = {
+                    selectPreset(
+                        clip,
+                        "SPLIT_DIAGONAL",
+                        onFramesChange,
+                        onLayoutChange
+                    )
+                },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -187,19 +141,25 @@ fun FrameEditor(
             LayoutButton(
                 label = "Single",
                 selected = clip.frameLayout == "SINGLE",
-                onClick = { selectLayout("SINGLE") },
+                onClick = {
+                    onLayoutChange("SINGLE")
+                },
                 modifier = Modifier.weight(1f)
             )
-            
-
-
             LayoutButton(
                 label = "Custom",
                 selected = clip.frameLayout == "CUSTOM",
-                onClick = { onLayoutChange("CUSTOM") },
+                onClick = {
+                    onLayoutChange("CUSTOM")
+                },
                 modifier = Modifier.weight(1f)
             )
         }
+
+        Text(
+            text = "*Diagonal export is not supported by the current exporter.",
+            color = Color.LightGray
+        )
 
         Text(
             text = "Frame layout preview",
@@ -211,9 +171,9 @@ fun FrameEditor(
                 .fillMaxWidth()
                 .height(240.dp)
                 .border(
-                    width = 1.dp,
-                    color = FrameEditorAccent,
-                    shape = RoundedCornerShape(12.dp)
+                    1.dp,
+                    FrameEditorAccent,
+                    RoundedCornerShape(12.dp)
                 )
                 .padding(8.dp)
         ) {
@@ -241,9 +201,9 @@ fun FrameEditor(
                             .width(previewWidth * frame.width)
                             .height(previewHeight * frame.height)
                             .border(
-                                width = 2.dp,
-                                color = frameColor,
-                                shape = RoundedCornerShape(4.dp)
+                                2.dp,
+                                frameColor,
+                                RoundedCornerShape(4.dp)
                             ),
                         contentAlignment = Alignment.TopStart
                     ) {
@@ -256,7 +216,7 @@ fun FrameEditor(
 
                 if (clip.frames.isEmpty()) {
                     Text(
-                        text = "Add a frame to begin",
+                        text = "No frames yet",
                         color = Color.LightGray,
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -267,46 +227,18 @@ fun FrameEditor(
         Button(
             onClick = {
                 val index = clip.frames.size
-
-                val newFrame = if (index == 0) {
-                    FrameRegion(
-                        name = "Frame 1",
-                        x = 0.20f,
-                        y = 0.10f,
-                        width = 0.60f,
-                        height = 0.80f
-                    )
-                } else {
-                    val x = if (index % 2 == 0) 0.05f else 0.55f
-
-                    FrameRegion(
-                        name = "Frame ${index + 1}",
-                        x = x,
-                        y = 0.10f,
-                        width = 0.40f,
-                        height = 0.60f
-                    )
-                }
-
+                val newFrame = FrameRegion(
+                    name = "Frame ${index + 1}",
+                    x = if (index % 2 == 0) 0.1f else 0.5f,
+                    y = 0.1f,
+                    width = 0.4f,
+                    height = 0.6f
+                )
                 onFramesChange(clip.frames + newFrame)
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Add Frame")
-        }
-
-        if (
-            clip.frameLayout == "SPLIT_VERTICAL" ||
-            clip.frameLayout == "SPLIT_HORIZONTAL"
-        ) {
-            Text(
-                text = if (clip.frames.size < 2) {
-                    "Add at least 2 frames to use a split layout."
-                } else {
-                    "Split layout selected. Export integration is handled separately."
-                },
-                color = FrameEditorAccent
-            )
         }
 
         clip.frames.forEachIndexed { index, frame ->
@@ -318,6 +250,118 @@ fun FrameEditor(
             )
         }
     }
+}
+
+private fun selectPreset(
+    clip: ClipSegment,
+    layout: String,
+    onFramesChange: (List<FrameRegion>) -> Unit,
+    onLayoutChange: (String) -> Unit
+) {
+    val presetFrames = when (layout) {
+        "SPLIT_VERTICAL" -> listOf(
+            FrameRegion(
+                name = "Speaker 1",
+                x = 0f,
+                y = 0f,
+                width = 1f,
+                height = 0.5f
+            ),
+            FrameRegion(
+                name = "Speaker 2",
+                x = 0f,
+                y = 0.5f,
+                width = 1f,
+                height = 0.5f
+            )
+        )
+
+        "SPLIT_60_40" -> listOf(
+            FrameRegion(
+                name = "Speaker 1",
+                x = 0f,
+                y = 0f,
+                width = 1f,
+                height = 0.6f
+            ),
+            FrameRegion(
+                name = "Speaker 2",
+                x = 0f,
+                y = 0.6f,
+                width = 1f,
+                height = 0.4f
+            )
+        )
+
+        "SPLIT_40_60" -> listOf(
+            FrameRegion(
+                name = "Speaker 1",
+                x = 0f,
+                y = 0f,
+                width = 1f,
+                height = 0.4f
+            ),
+            FrameRegion(
+                name = "Speaker 2",
+                x = 0f,
+                y = 0.4f,
+                width = 1f,
+                height = 0.6f
+            )
+        )
+
+        "SPLIT_HORIZONTAL" -> listOf(
+            FrameRegion(
+                name = "Speaker 1",
+                x = 0f,
+                y = 0f,
+                width = 0.5f,
+                height = 1f
+            ),
+            FrameRegion(
+                name = "Speaker 2",
+                x = 0.5f,
+                y = 0f,
+                width = 0.5f,
+                height = 1f
+            )
+        )
+
+        "SPLIT_DIAGONAL" -> listOf(
+            FrameRegion(
+                name = "Speaker 1",
+                x = 0f,
+                y = 0f,
+                width = 1f,
+                height = 0.5f
+            ),
+            FrameRegion(
+                name = "Speaker 2",
+                x = 0f,
+                y = 0.5f,
+                width = 1f,
+                height = 0.5f
+            )
+        )
+
+        else -> clip.frames
+    }
+
+    if (layout.startsWith("SPLIT_")) {
+        val detectedFrames = clip.frames
+            .filter { it.detectedFace }
+            .take(2)
+
+        onFramesChange(
+            if (detectedFrames.size >= 2) {
+                detectedFrames
+            } else {
+                presetFrames
+            }
+        )
+    }
+
+    onLayoutChange(layout)
 }
 
 @Composable
@@ -351,114 +395,86 @@ private fun FrameControls(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = "${frame.name} — Frame ${index + 1}",
+                text = "${frame.name} · ${index + 1}",
                 color = Color.White
             )
 
-            Text(
-                text = "Horizontal position: ${"%.2f".format(draftX)}",
-                color = Color.LightGray
-            )
-
+            Text("Horizontal position", color = Color.LightGray)
             Slider(
                 value = draftX,
                 onValueChange = { value ->
-                    draftX = value.coerceIn(
-                        0f,
-                        (1f - draftWidth).coerceAtLeast(0f)
-                    )
+                    draftX = value.coerceIn(0f, 1f - draftWidth)
                 },
+                valueRange = 0f..(1f - draftWidth).coerceAtLeast(0f),
                 onValueChangeFinished = {
-                    commitFrameChange(
-                        clip,
-                        frame,
-                        frame.copy(x = draftX),
-                        onFramesChange
+                    onFramesChange(
+                        clip.frames.map {
+                            if (it.id == frame.id) {
+                                it.copy(x = draftX)
+                            } else it
+                        }
                     )
-                },
-                valueRange = 0f..(1f - draftWidth).coerceAtLeast(0f)
+                }
             )
 
-            Text(
-                text = "Vertical position: ${"%.2f".format(draftY)}",
-                color = Color.LightGray
-            )
-
+            Text("Vertical position", color = Color.LightGray)
             Slider(
                 value = draftY,
                 onValueChange = { value ->
-                    draftY = value.coerceIn(
-                        0f,
-                        (1f - draftHeight).coerceAtLeast(0f)
-                    )
+                    draftY = value.coerceIn(0f, 1f - draftHeight)
                 },
+                valueRange = 0f..(1f - draftHeight).coerceAtLeast(0f),
                 onValueChangeFinished = {
-                    commitFrameChange(
-                        clip,
-                        frame,
-                        frame.copy(y = draftY),
-                        onFramesChange
+                    onFramesChange(
+                        clip.frames.map {
+                            if (it.id == frame.id) {
+                                it.copy(y = draftY)
+                            } else it
+                        }
                     )
-                },
-                valueRange = 0f..(1f - draftHeight).coerceAtLeast(0f)
+                }
             )
 
-            Text(
-                text = "Frame width: ${"%.2f".format(draftWidth)}",
-                color = Color.LightGray
-            )
-
+            Text("Width", color = Color.LightGray)
             Slider(
                 value = draftWidth,
                 onValueChange = { value ->
                     draftWidth = value.coerceIn(
-                        0.10f,
-                        (1f - draftX).coerceAtLeast(0.10f)
+                        0.05f,
+                        1f - draftX
                     )
                 },
+                valueRange = 0.05f..(1f - draftX).coerceAtLeast(0.05f),
                 onValueChangeFinished = {
-                    commitFrameChange(
-                        clip,
-                        frame,
-                        frame.copy(
-                            x = draftX,
-                            width = draftWidth,
-                            y = draftY,
-                            height = draftHeight
-                        ),
-                        onFramesChange
+                    onFramesChange(
+                        clip.frames.map {
+                            if (it.id == frame.id) {
+                                it.copy(width = draftWidth)
+                            } else it
+                        }
                     )
-                },
-                valueRange = 0.10f..(1f - draftX).coerceAtLeast(0.10f)
+                }
             )
 
-            Text(
-                text = "Frame height: ${"%.2f".format(draftHeight)}",
-                color = Color.LightGray
-            )
-
+            Text("Height", color = Color.LightGray)
             Slider(
                 value = draftHeight,
                 onValueChange = { value ->
                     draftHeight = value.coerceIn(
-                        0.10f,
-                        (1f - draftY).coerceAtLeast(0.10f)
+                        0.05f,
+                        1f - draftY
                     )
                 },
+                valueRange = 0.05f..(1f - draftY).coerceAtLeast(0.05f),
                 onValueChangeFinished = {
-                    commitFrameChange(
-                        clip,
-                        frame,
-                        frame.copy(
-                            x = draftX,
-                            y = draftY,
-                            width = draftWidth,
-                            height = draftHeight
-                        ),
-                        onFramesChange
+                    onFramesChange(
+                        clip.frames.map {
+                            if (it.id == frame.id) {
+                                it.copy(height = draftHeight)
+                            } else it
+                        }
                     )
-                },
-                valueRange = 0.10f..(1f - draftY).coerceAtLeast(0.10f)
+                }
             )
 
             OutlinedButton(
@@ -469,7 +485,7 @@ private fun FrameControls(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Remove ${frame.name}")
+                Text("Delete ${frame.name}")
             }
         }
     }
@@ -479,40 +495,24 @@ private fun FrameControls(
 private fun LayoutButton(
     label: String,
     selected: Boolean,
-    enabled: Boolean = true,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (selected) {
         Button(
             onClick = onClick,
-            enabled = enabled,
-            modifier = modifier
+            modifier = modifier.height(42.dp),
+            shape = RoundedCornerShape(10.dp)
         ) {
             Text(label)
         }
     } else {
         OutlinedButton(
             onClick = onClick,
-            enabled = enabled,
-            modifier = modifier
+            modifier = modifier.height(42.dp),
+            shape = RoundedCornerShape(10.dp)
         ) {
             Text(label)
         }
     }
-}
-
-private fun commitFrameChange(
-    clip: ClipSegment,
-    oldFrame: FrameRegion,
-    newFrame: FrameRegion,
-    onFramesChange: (List<FrameRegion>) -> Unit
-) {
-    if (oldFrame == newFrame) return
-
-    onFramesChange(
-        clip.frames.map { frame ->
-            if (frame.id == oldFrame.id) newFrame else frame
-        }
-    )
 }
