@@ -2279,50 +2279,55 @@ applyClipChange(
 
 
                         Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = Color(0xFF211E2B),
-                border = BorderStroke(
-                    1.dp,
-                    Color(0xFF393344)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Text(
-                        text = "TIP",
-                        color = ClipkaAccent,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color(0xFF211E2B),
+                            border = BorderStroke(
+                                1.dp,
+                                Color(0xFF393344)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(14.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                Text(
+                                    text = "TIP",
+                                    color = ClipkaAccent,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
 
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "Export each clip your way",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "Export each clip your way",
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
 
-                        Text(
-                            text = "Choose each clip's aspect ratio, then export individual MP4 files or a ZIP batch.",
-                            color = Color.LightGray,
-                            fontSize = 12.sp
-                        )
+                                    Text(
+                                        text = "Choose each clip's aspect ratio, then export individual MP4 files or a ZIP batch.",
+                                        color = Color.LightGray,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
-          }
-        } 
-      } 
+        }
+    }
+}
+
+private fun validateClipTimes(
             
 
 private fun validateClipTimes(
