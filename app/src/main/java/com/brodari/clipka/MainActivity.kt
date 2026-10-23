@@ -90,7 +90,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
-                    primary = Color(0xFF9B8CFF),
+                   primary = ClipkaAccent,
                     background = ClipkaBackground,
                     surface = ClipkaCard
                 )
@@ -667,8 +667,8 @@ var projectStatus by remember { mutableStateOf("") }
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(horizontal = 14.dp, vertical = 16.dp),
+verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             
             Surface(
@@ -776,7 +776,7 @@ var projectStatus by remember { mutableStateOf("") }
                         text = if (previewClip != null) {
                             "${previewClip.aspectRatio} • ${previewClip.name}"
                         } else {
-                            "Select a clip to preview its framing"
+                            "Original video • Select a clip to preview its crop"
                         },
                         color = Color.LightGray,
                         fontSize = 12.sp
@@ -1166,7 +1166,7 @@ var projectStatus by remember { mutableStateOf("") }
                         ) {
                             Text(
                                 text = if (durationMs > 0L) {
-                                    "${(durationMs / 1000L)} sec"
+                                    "Duration ${formatTime(durationMs)}"
                                 } else {
                                     "No video"
                                 },
@@ -1295,7 +1295,7 @@ var projectStatus by remember { mutableStateOf("") }
                     )
 
                     Text(
-                        text = "Selected clip: individual MP4 file",
+                        "Export the selected clip as an MP4 video."
                         color = Color.LightGray,
                         fontSize = 12.sp
                     )
@@ -1340,7 +1340,7 @@ var projectStatus by remember { mutableStateOf("") }
                     Divider(color = Color.DarkGray)
 
                     Text(
-                        text = "All clips: one ZIP archive",
+                        "Export every clip together in one ZIP archive."
                         color = Color.LightGray,
                         fontSize = 12.sp
                     )
@@ -1453,7 +1453,7 @@ var projectStatus by remember { mutableStateOf("") }
                     )
 
                     Text(
-                        text = "Create and refine clips",
+                        "Trim, organize and prepare clips for export"
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
@@ -1727,7 +1727,7 @@ var projectStatus by remember { mutableStateOf("") }
                         )
 
                         Text(
-                            text = "Video select karo, start aur end time set karo, phir Add Clip dabao.",
+                         "Choose a video, set start and end times, then tap Add Clip."
                             color = Color.LightGray,
                             fontSize = 13.sp
                         )
