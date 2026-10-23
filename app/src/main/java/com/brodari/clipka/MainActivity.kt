@@ -2321,9 +2321,7 @@ applyClipChange(
                 }
             }
         }
-    }
-}
-    } 
+            
 
 private fun validateClipTimes(
     startMs: Long?,
