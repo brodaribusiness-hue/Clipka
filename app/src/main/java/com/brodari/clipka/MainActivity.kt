@@ -694,7 +694,7 @@ var projectStatus by remember { mutableStateOf("") }
                         )
 
                         Text(
-                            text = "AI VIDEO CLIP STUDIO",
+                            text = "AI VIDEO EDITOR  •  LOCAL WORKFLOW",
                             color = Color.LightGray,
                             fontSize = 11.sp,
                             letterSpacing = 1.sp
