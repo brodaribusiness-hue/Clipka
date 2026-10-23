@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Pause
@@ -1213,89 +1214,93 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                     )
 
                     if (clips.isEmpty()) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0xFF101116)
-                        ) {
-                            Text(
-                                "Add a clip to start editing your timeline",
-                                modifier = Modifier.padding(14.dp),
-                                color = Color.LightGray,
-                                fontSize = 12.sp
-                            )
-                        }
-                    } else {
-                        clips.forEachIndexed { index, segment ->
-                            val selected = segment.id == selectedClipId
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = Color(0xFF101116)
+    ) {
+        Text(
+            "Add a clip to start editing your timeline",
+            modifier = Modifier.padding(14.dp),
+            color = Color.LightGray,
+            fontSize = 12.sp
+        )
+    }
+} else {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        clips.forEachIndexed { index, segment ->
+            val selected = segment.id == selectedClipId
 
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .border(
-                                        width = if (selected) 2.dp else 1.dp,
-                                        color = if (selected) {
-                                            ClipkaAccent
-                                        } else {
-                                            Color(0xFF393944)
-                                        },
-                                        shape = RoundedCornerShape(10.dp)
-                                    ),
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (selected) {
-                                    Color(0xFF302944)
-                                } else {
-                                    Color(0xFF101116)
-                                }
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        "${index + 1}",
-                                        color = ClipkaAccent,
-                                        fontWeight = FontWeight.Bold
-                                    )
+            Surface(
+                modifier = Modifier
+                    .width(165.dp)
+                    .border(
+                        width = if (selected) 2.dp else 1.dp,
+                        color = if (selected) {
+                            ClipkaAccent
+                        } else {
+                            Color(0xFF393944)
+                        },
+                        shape = RoundedCornerShape(12.dp)
+                    ),
+                shape = RoundedCornerShape(12.dp),
+                color = if (selected) {
+                    Color(0xFF302944)
+                } else {
+                    Color(0xFF101116)
+                }
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "CLIP ${index + 1}",
+                        color = ClipkaAccent,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
 
-                                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        segment.name,
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2
+                    )
 
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            segment.name,
-                                            color = Color.White,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
+                    Text(
+                        "${formatTime(segment.startMs)} – " +
+                            formatTime(segment.endMs),
+                        color = Color.LightGray,
+                        fontSize = 11.sp
+                    )
 
-                                        Text(
-                                            "${formatTime(segment.startMs)} – " +
-                                                "${formatTime(segment.endMs)}",
-                                            color = Color.LightGray,
-                                            fontSize = 11.sp
-                                        )
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = {
-                                            showClipInPreview(segment, false)
-                                        }
-                                    ) {
-                                        Text(
-                                            if (selected) "Selected" else "Select",
-                                            fontSize = 11.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                    OutlinedButton(
+                        onClick = {
+                            showClipInPreview(segment, false)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            if (selected) "Selected" else "Preview clip",
+                            fontSize = 11.sp
+                        )
                     }
                 }
             }
+        }
+    }
+}
+                        
+                    
+                
+          
 
 
 
