@@ -2320,7 +2320,9 @@ applyClipChange(
                     }
                 }
             }
-        }
+          }
+        } 
+      } 
             
 
 private fun validateClipTimes(
