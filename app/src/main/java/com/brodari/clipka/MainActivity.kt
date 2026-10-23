@@ -2029,11 +2029,13 @@ var projectStatus by remember { mutableStateOf("") }
                             fontWeight = FontWeight.SemiBold
                         )
 
-                        Text(
-                            text = "Detect faces automatically or customize this clip's frame and layout below.",
-                            color = Color.LightGray,
-                            fontSize = 13.sp
-                        )
+                        
+Text(
+    text = "Analyze faces in this clip, then adjust speaker framing and split-screen layout below.",
+    color = Color.LightGray,
+    fontSize = 13.sp
+)
+
 
                         Button(
                             onClick = {
@@ -2060,18 +2062,31 @@ var projectStatus by remember { mutableStateOf("") }
                                                 faceDetectionStatus =
                                                     "Koi face nahi mila. Doosra clip try karo."
                                             } else {
-                                                applyClipChange(
-                                                    clips.map { item ->
-                                                        if (item.id == clip.id) {
-                                                            item.copy(
-                                                                frames = detectedFrames,
-                                                                frameLayout = "SINGLE"
-                                                            )
-                                                        } else {
-                                                            item
-                                                        }
-                                                    }
-                                                )
+                                                
+val updatedLayout = when {
+    detectedFrames.size >= 2 -> "SPLIT_VERTICAL"
+    else -> "SINGLE"
+}
+
+val framesForLayout = if (detectedFrames.size >= 2) {
+    detectedFrames.take(2)
+} else {
+    detectedFrames
+}
+
+applyClipChange(
+    clips.map { item ->
+        if (item.id == clip.id) {
+            item.copy(
+                frames = framesForLayout,
+                frameLayout = updatedLayout
+            )
+        } else {
+            item
+        }
+    }
+)
+
 
                                                 faceDetectionStatus =
                                                     "${detectedFrames.size} face(s) detected."
