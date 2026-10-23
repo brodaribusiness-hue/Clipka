@@ -1295,8 +1295,8 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                     )
 
                     Text(
-                        "Export the selected clip as an MP4 video."
-                        color = Color.LightGray,
+    "Export the selected clip as an MP4 video.",
+    color = Color.LightGray,
                         fontSize = 12.sp
                     )
 
@@ -1729,6 +1729,8 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                         Text(
     "Choose a video, set start and end times, then tap Add Clip.",
     color = Color.LightGray,
+    fontSize = 13.sp
+)
                     }
                 }
             }
