@@ -1922,6 +1922,89 @@ var projectStatus by remember { mutableStateOf("") }
                                 }
                             }
                         }
+                        
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF15161D),
+                            border = BorderStroke(
+                                1.dp,
+                                Color(0xFF393344)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalArrangement =
+                                    Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "CLIP FRAMING",
+                                    color = ClipkaAccent,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.5.sp
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = "LAYOUT",
+                                            color = Color.LightGray,
+                                            fontSize = 10.sp
+                                        )
+                                        Text(
+                                            text = when (segment.frameLayout) {
+                                                "SPLIT_VERTICAL" -> "Vertical 50/50"
+                                                "SPLIT_60_40" -> "Split 60/40"
+                                                "SPLIT_40_60" -> "Split 40/60"
+                                                "SPLIT_HORIZONTAL" -> "Horizontal"
+                                                "SPLIT_DIAGONAL" -> "Diagonal"
+                                                "CUSTOM" -> "Custom"
+                                                else -> "Single"
+                                            },
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = "FRAME REGIONS",
+                                            color = Color.LightGray,
+                                            fontSize = 10.sp
+                                        )
+                                        Text(
+                                            text = "${segment.frames.size} saved",
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = if (segment.frames.isEmpty()) {
+                                        "No framing regions saved. Use Edit to set speaker framing."
+                                    } else {
+                                        "Framing settings saved for this clip."
+                                    },
+                                    color = Color.LightGray,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
