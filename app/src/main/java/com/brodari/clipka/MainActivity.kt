@@ -1125,60 +1125,59 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
 
 
             
+            
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = ClipkaCard
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0xFF191A22)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "TIMELINE",
+                            color = ClipkaAccent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            "${clips.size} clips",
+                            color = Color.LightGray,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "TIMELINE",
-                                color = ClipkaAccent,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-
-                            Text(
-                                text = "Navigate your video",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = ClipkaBackground
-                        ) {
-                            Text(
-                                text = if (durationMs > 0L) {
-                                    "Duration ${formatTime(durationMs)}"
+                        Text(
+                            formatTime(
+                                if (isSeeking && durationMs > 0L) {
+                                    (seekValue * durationMs).toLong()
                                 } else {
-                                    "No video"
-                                },
-                                modifier = Modifier.padding(
-                                    horizontal = 10.dp,
-                                    vertical = 7.dp
-                                ),
-                                color = ClipkaAccent,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                                    positionMs
+                                }
+                            ),
+                            color = ClipkaAccent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            formatTime(durationMs),
+                            color = Color.LightGray,
+                            fontSize = 13.sp
+                        )
                     }
 
                     Slider(
@@ -1190,13 +1189,13 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                         } else {
                             0f
                         },
-                        onValueChange = { newValue ->
+                        onValueChange = { value ->
                             isSeeking = true
-                            seekValue = newValue
+                            seekValue = value
                         },
                         onValueChangeFinished = {
-                            previewingClipId = null
                             if (durationMs > 0L) {
+                                previewingClipId = null
                                 exoPlayer.seekTo(
                                     (seekValue * durationMs).toLong()
                                 )
@@ -1206,65 +1205,98 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                         enabled = videoUri != null && durationMs > 0L
                     )
 
-                                        Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Text(
+                        "CLIPS",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    if (clips.isEmpty()) {
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF15161D)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(
-                                    horizontal = 14.dp,
-                                    vertical = 10.dp
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = "CURRENT POSITION",
-                                    color = Color.LightGray,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    text = formatTime(
-                                        if (isSeeking && durationMs > 0L) {
-                                            (seekValue * durationMs).toLong()
-                                        } else {
-                                            positionMs
-                                        }
-                                    ),
-                                    color = ClipkaAccent,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFF101116)
                         ) {
                             Text(
-                                text = "TOTAL DURATION",
+                                "Add a clip to start editing your timeline",
+                                modifier = Modifier.padding(14.dp),
                                 color = Color.LightGray,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 12.sp
                             )
+                        }
+                    } else {
+                        clips.forEachIndexed { index, segment ->
+                            val selected = segment.id == selectedClipId
 
-                            Text(
-                                text = formatTime(durationMs),
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(
+                                        width = if (selected) 2.dp else 1.dp,
+                                        color = if (selected) {
+                                            ClipkaAccent
+                                        } else {
+                                            Color(0xFF393944)
+                                        },
+                                        shape = RoundedCornerShape(10.dp)
+                                    ),
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (selected) {
+                                    Color(0xFF302944)
+                                } else {
+                                    Color(0xFF101116)
+                                }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "${index + 1}",
+                                        color = ClipkaAccent,
+                                        fontWeight = FontWeight.Bold
+                                    )
+
+                                    Spacer(Modifier.width(10.dp))
+
+                                    Column(
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            segment.name,
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+
+                                        Text(
+                                            "${formatTime(segment.startMs)} – " +
+                                                "${formatTime(segment.endMs)}",
+                                            color = Color.LightGray,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            showClipInPreview(segment, false)
+                                        }
+                                    ) {
+                                        Text(
+                                            if (selected) "Selected" else "Select",
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
+
 
 
                 
