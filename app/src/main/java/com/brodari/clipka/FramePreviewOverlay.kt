@@ -1,6 +1,6 @@
-
 package com.brodari.clipka
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -15,13 +15,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 private val PreviewFrameColors = listOf(
     Color(0xFFB7A9FF),
     Color(0xFF70D6B5),
     Color(0xFFFFB86B),
-    Color(0xFF71C9F8)
+    Color(0xFF71C9F8),
+    Color(0xFFFF7597)
 )
 
 @Composable
@@ -58,11 +61,14 @@ fun FramePreviewOverlay(
                 PreviewFrameColors[index % PreviewFrameColors.size]
 
             val displayX =
-                (frame.x - cropOffsetX) / visibleWidth
+                ((frame.x - cropOffsetX) / visibleWidth).coerceIn(-1f, 1f)
             val displayY =
-                (frame.y - cropOffsetY) / visibleHeight
-            val displayWidth = frame.width / visibleWidth
-            val displayHeight = frame.height / visibleHeight
+                ((frame.y - cropOffsetY) / visibleHeight).coerceIn(-1f, 1f)
+
+            val displayWidth =
+                (frame.width / visibleWidth).coerceAtLeast(0f)
+            val displayHeight =
+                (frame.height / visibleHeight).coerceAtLeast(0f)
 
             Box(
                 modifier = Modifier
@@ -75,18 +81,30 @@ fun FramePreviewOverlay(
                     .border(
                         width = 2.dp,
                         color = frameColor,
-                        shape = RoundedCornerShape(4.dp)
+                        shape = RoundedCornerShape(5.dp)
                     )
             ) {
                 Text(
                     text = frame.name,
                     color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
                         .align(Alignment.TopStart)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.72f),
+                            shape = RoundedCornerShape(
+                                topStart = 3.dp,
+                                bottomEnd = 5.dp
+                            )
+                        )
                         .border(
                             width = 1.dp,
                             color = frameColor,
-                            shape = RoundedCornerShape(3.dp)
+                            shape = RoundedCornerShape(
+                                topStart = 3.dp,
+                                bottomEnd = 5.dp
+                            )
                         )
                 )
             }
