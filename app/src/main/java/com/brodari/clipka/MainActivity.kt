@@ -672,76 +672,112 @@ var projectStatus by remember { mutableStateOf("") }
 verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             
+            
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = ClipkaCard
+                shape = RoundedCornerShape(22.dp),
+                color = Color(0xFF1B1C24),
+                border = BorderStroke(1.dp, Color(0xFF34313F))
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 15.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Text(
-                            text = "CLIPKA",
-                            fontSize = 27.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = ClipkaAccent
-                        )
-
-                        Text(
-                            text = "AI VIDEO EDITOR  •  LOCAL WORKFLOW",
-                            color = Color.LightGray,
-                            fontSize = 11.sp,
-                            letterSpacing = 1.sp
-                        )
-
-                        Text(
-                            text = if (videoUri != null) {
-                                "Project ready to edit"
-                            } else {
-                                "Create your next short"
-                            },
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = ClipkaBackground
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(
-                            modifier = Modifier.padding(
-                                horizontal = 15.dp,
-                                vertical = 11.dp
-                            ),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
-                                text = clips.size.toString(),
+                                text = "CLIPKA",
+                                fontSize = 29.sp,
+                                fontWeight = FontWeight.ExtraBold,
                                 color = ClipkaAccent,
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.Bold
+                                letterSpacing = 1.sp
                             )
 
                             Text(
-                                text = "CLIPS",
+                                text = "VIDEO CLIP STUDIO",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 color = Color.LightGray,
-                                fontSize = 10.sp,
-                                letterSpacing = 1.sp
+                                letterSpacing = 1.5.sp
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = Color(0xFF302944)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(
+                                    horizontal = 16.dp,
+                                    vertical = 10.dp
+                                ),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = clips.size.toString(),
+                                    color = ClipkaAccent,
+                                    fontSize = 23.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Text(
+                                    text = "CLIPS",
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF101116)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(
+                                horizontal = 12.dp,
+                                vertical = 11.dp
+                            ),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(9.dp)
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(9.dp),
+                                shape = RoundedCornerShape(50),
+                                color = if (videoUri != null) {
+                                    Color(0xFF75D6A0)
+                                } else {
+                                    ClipkaAccent
+                                }
+                            ) {}
+
+                            Text(
+                                text = if (videoUri != null) {
+                                    "Video ready for editing"
+                                } else {
+                                    "Choose a video to get started"
+                                },
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
                 }
             }
+
                         Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
