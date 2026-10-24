@@ -778,68 +778,76 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                 }
             }
 
-                        Surface(
+                        
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = ClipkaCard
+                shape = RoundedCornerShape(22.dp),
+                color = Color(0xFF1B1C24),
+                border = BorderStroke(1.dp, Color(0xFF34313F))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Text(
+                                text = if (previewClip != null) {
+                                    "CLIP PREVIEW"
+                                } else {
+                                    "VIDEO PREVIEW"
+                                },
+                                color = Color.White,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 17.sp,
+                                letterSpacing = 0.5.sp
+                            )
 
-                        Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = if (previewClip != null) {
-                            "CLIP PREVIEW"
-                        } else {
-                            "VIDEO PREVIEW"
-                        },
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                            Text(
+                                text = if (previewClip != null) {
+                                    "${previewClip.aspectRatio} • ${previewClip.name}"
+                                } else {
+                                    "Original video preview"
+                                },
+                                color = Color.LightGray,
+                                fontSize = 12.sp
+                            )
+                        }
 
-                    Text(
-                        text = if (previewClip != null) {
-                            "${previewClip.aspectRatio} • ${previewClip.name}"
-                        } else {
-                            "Original video • Select a clip to preview its crop"
-                        },
-                        color = Color.LightGray,
-                        fontSize = 12.sp
-                    )
-                }
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF302944),
+                            border = BorderStroke(
+                                1.dp,
+                                Color(0xFF51456E)
+                            )
+                        ) {
+                            Text(
+                                text = if (previewClip != null) {
+                                    previewClip.aspectRatio
+                                } else {
+                                    "ORIGINAL"
+                                },
+                                modifier = Modifier.padding(
+                                    horizontal = 12.dp,
+                                    vertical = 9.dp
+                                ),
+                                color = ClipkaAccent,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
 
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF353044)
-                ) {
-                    Text(
-                        text = if (previewClip != null) {
-                            previewClip.aspectRatio
-                        } else {
-                            "ORIGINAL"
-                        },
-                        modifier = Modifier.padding(
-                            horizontal = 10.dp,
-                            vertical = 7.dp
-                        ),
-                        color = ClipkaAccent,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
 
 
             BoxWithConstraints(
