@@ -1383,6 +1383,154 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                             color = if (
                                 projectStatus.contains(
                                     "failed",
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = Color(0xFF1B1C24),
+                border = BorderStroke(1.dp, Color(0xFF34313F))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "VIDEO SOURCE",
+                                color = ClipkaAccent,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.5.sp
+                            )
+                            Text(
+                                text = "Your media",
+                                color = Color.White,
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = "Video source",
+                            tint = ClipkaAccent,
+                            modifier = Modifier.size(27.dp)
+                        )
+                    }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFF101116),
+                        border = BorderStroke(1.dp, Color(0xFF34313F))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(42.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF302944)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.FolderOpen,
+                                        contentDescription = null,
+                                        tint = ClipkaAccent,
+                                        modifier = Modifier.size(23.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (videoUri != null) {
+                                        "Selected video"
+                                    } else {
+                                        "No video selected"
+                                    },
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = videoName,
+                                    color = Color.LightGray,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            videoPicker.launch(arrayOf("video/*"))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (videoUri == null) {
+                                "Choose Video"
+                            } else {
+                                "Change Video"
+                            },
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { saveProject() },
+                            enabled = videoUri != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Save Project")
+                        }
+                        OutlinedButton(
+                            onClick = { loadProject() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Load Project")
+                        }
+                    }
+
+                    if (projectStatus.isNotEmpty()) {
+                        Text(
+                            text = projectStatus,
+                            color = if (
+                                projectStatus.contains(
+                                    "failed",
                                     ignoreCase = true
                                 )
                             ) {
@@ -1416,14 +1564,12 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                                     val activeClip = clips.firstOrNull {
                                         it.id == previewingClipId
                                     }
-
                                     if (
                                         activeClip != null &&
                                         exoPlayer.currentPosition >= activeClip.endMs
                                     ) {
                                         exoPlayer.seekTo(activeClip.startMs)
                                     }
-
                                     exoPlayer.play()
                                 }
                             },
@@ -1468,9 +1614,6 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                 }
             }
 
-
-
-            
             
             Surface(
                 modifier = Modifier.fillMaxWidth(),
