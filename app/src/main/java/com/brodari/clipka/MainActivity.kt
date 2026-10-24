@@ -1072,13 +1072,106 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                                 )
                             ) {
                                 Color(0xFFFF8A80)
-                            } else {
-                                ClipkaAccent
-                            },
-                            fontSize = 12.sp
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = Color(0xFF1B1C24),
+                border = BorderStroke(1.dp, Color(0xFF34313F))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "VIDEO SOURCE",
+                                color = ClipkaAccent,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.5.sp
+                            )
+
+                            Text(
+                                text = "Your media",
+                                color = Color.White,
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = "Video source",
+                            tint = ClipkaAccent,
+                            modifier = Modifier.size(27.dp)
                         )
                     }
 
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFF101116),
+                        border = BorderStroke(
+                            1.dp,
+                            Color(0xFF34313F)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                modifier = Modifier.size(42.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF302944)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FolderOpen,
+                                        contentDescription = null,
+                                        tint = ClipkaAccent,
+                                        modifier = Modifier.size(23.dp)
+                                    )
+                                }
+                            }
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (videoUri != null) {
+                                        "Selected video"
+                                    } else {
+                                        "No video selected"
+                                    },
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
+
+                                Text(
+                                    text = videoName,
+                                    color = Color.LightGray,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
 
                     Button(
                         onClick = {
@@ -1086,7 +1179,7 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
+                            .height(52.dp),
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(
@@ -1096,13 +1189,66 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = if (videoUri == null) {
-                                "Choose video"
+                                "Choose Video"
                             } else {
-                                "Change video"
+                                "Change Video"
                             },
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Bold
                         )
                     }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { saveProject() },
+                            enabled = videoUri != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Save Project")
+                        }
+
+                        OutlinedButton(
+                            onClick = { loadProject() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Load Project")
+                        }
+                    }
+
+                    if (projectStatus.isNotEmpty()) {
+                        Text(
+                            text = projectStatus,
+                            color = if (
+                                projectStatus.contains(
+                                    "failed",
+                                    ignoreCase = true
+                                )
+                            ) {
+                                Color(0xFFFF8A80)
+                            } else {
+                                ClipkaAccent
+                            },
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Divider(color = Color(0xFF34313F))
+
+                    Text(
+                        text = "PLAYBACK",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
+                    )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1131,7 +1277,7 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp),
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) {
@@ -1155,7 +1301,7 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                             modifier = Modifier
                                 .weight(1f)
                                 .height(48.dp),
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Refresh,
@@ -1167,6 +1313,7 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                     }
                 }
             }
+
 
 
             
