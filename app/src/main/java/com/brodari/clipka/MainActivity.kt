@@ -6,36 +6,30 @@ import android.os.Handler
 import android.os.Looper
 import java.io.File
 import java.io.IOException
+
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.border
+
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.horizontalScroll
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -44,14 +38,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -60,24 +48,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.transformer.Effects
+
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.effect.Presentation
 import androidx.media3.effect.Crop
+import androidx.media3.effect.Presentation
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
+import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import androidx.compose.material3.Divider
+
 import kotlinx.coroutines.delay
-import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 
 private val ClipkaAccent = Color(0xFFB7A9FF)
@@ -91,7 +79,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
-                   primary = ClipkaAccent,
+                    primary = ClipkaAccent,
                     background = ClipkaBackground,
                     surface = ClipkaCard
                 )
@@ -109,6 +97,7 @@ private fun ClipkaScreen() {
 
     var videoUri by remember { mutableStateOf<Uri?>(null) }
     var videoName by remember { mutableStateOf("No video selected") }
+
     var isPlaying by remember { mutableStateOf(false) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var positionMs by remember { mutableLongStateOf(0L) }
@@ -123,17 +112,24 @@ private fun ClipkaScreen() {
     var previewingClipId by remember { mutableStateOf<String?>(null) }
 
     var sourceVideoAspectRatio by remember {
-    mutableStateOf(16f / 9f)
+        mutableStateOf(16f / 9f)
     }
+
     var clipError by remember { mutableStateOf("") }
-var exportStatus by remember { mutableStateOf("") }
-var faceDetectionStatus by remember { mutableStateOf("") }
-var projectStatus by remember { mutableStateOf("") }
+    var exportStatus by remember { mutableStateOf("") }
+    var faceDetectionStatus by remember { mutableStateOf("") }
+    var projectStatus by remember { mutableStateOf("") }
+
     var isDetectingFaces by remember { mutableStateOf(false) }
     val faceDetectionScope = rememberCoroutineScope()
+
     var isExporting by remember { mutableStateOf(false) }
-    var pendingExportClip by remember { mutableStateOf<ClipSegment?>(null) }
-    var activeTransformer by remember { mutableStateOf<Transformer?>(null) }
+    var pendingExportClip by remember {
+        mutableStateOf<ClipSegment?>(null)
+    }
+    var activeTransformer by remember {
+        mutableStateOf<Transformer?>(null)
+    }
 
     var isBatchExporting by remember { mutableStateOf(false) }
     var pendingZipFile by remember { mutableStateOf<File?>(null) }
@@ -177,7 +173,10 @@ var projectStatus by remember { mutableStateOf("") }
         clipError = ""
     }
 
-    fun showClipInPreview(segment: ClipSegment, play: Boolean) {
+    fun showClipInPreview(
+        segment: ClipSegment,
+        play: Boolean
+    ) {
         selectClip(segment)
         previewingClipId = segment.id
         exoPlayer.pause()
@@ -188,7 +187,6 @@ var projectStatus by remember { mutableStateOf("") }
         }
     }
 
-    
     fun saveProject() {
         val sourceUri = videoUri
 
@@ -276,12 +274,12 @@ var projectStatus by remember { mutableStateOf("") }
     val videoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { selectedUri: Uri? ->
-                if (selectedUri != null) {
+        if (selectedUri != null) {
             try {
                 context.contentResolver.takePersistableUriPermission(
-    selectedUri,
-    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-)
+                    selectedUri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
             } catch (_: SecurityException) {
                 // Continue if persistent permission is unavailable.
             }
@@ -309,7 +307,7 @@ var projectStatus by remember { mutableStateOf("") }
             exportStatus = ""
         }
     }
-
+    
     val exportDestinationPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("video/mp4")
     ) { destinationUri: Uri? ->
@@ -329,7 +327,7 @@ var projectStatus by remember { mutableStateOf("") }
             )
 
             isExporting = true
-            exportStatus = "Clip crop aur export ho rahi hai..."
+            exportStatus = "Clip export ho rahi hai..."
             exoPlayer.pause()
             isPlaying = false
 
@@ -344,7 +342,6 @@ var projectStatus by remember { mutableStateOf("") }
                     )
                     .build()
 
-                
                 if (clipToExport.frameLayout == "SPLIT_DIAGONAL") {
                     throw IllegalArgumentException(
                         "Diagonal split export abhi supported nahi hai."
@@ -407,20 +404,10 @@ var projectStatus by remember { mutableStateOf("") }
                         .setRemoveVideo(true)
                         .build()
 
-                    val firstSequence = EditedMediaItemSequence(
-                        listOf(firstVideo)
-                    )
-                    val secondSequence = EditedMediaItemSequence(
-                        listOf(secondVideo)
-                    )
-                    val audioSequence = EditedMediaItemSequence(
-                        listOf(audioItem)
-                    )
-
                     splitComposition = Composition.Builder(
-                        firstSequence,
-                        secondSequence,
-                        audioSequence
+                        EditedMediaItemSequence(listOf(firstVideo)),
+                        EditedMediaItemSequence(listOf(secondVideo)),
+                        EditedMediaItemSequence(listOf(audioItem))
                     )
                         .setVideoCompositorSettings(
                             SplitScreenCompositorSettings(
@@ -433,9 +420,9 @@ var projectStatus by remember { mutableStateOf("") }
                     val selectedFrame = clipToExport.frames.firstOrNull()
 
                     val videoEffects = if (
-    clipToExport.frameLayout in setOf("SINGLE", "CUSTOM") &&
-    selectedFrame != null
-) {
+                        clipToExport.frameLayout in setOf("SINGLE", "CUSTOM") &&
+                        selectedFrame != null
+                    ) {
                         val left = -1f + 2f * selectedFrame.x
                         val right = -1f + 2f *
                             (selectedFrame.x + selectedFrame.width)
@@ -453,10 +440,7 @@ var projectStatus by remember { mutableStateOf("") }
 
                     editedMediaItem = EditedMediaItem.Builder(clippedMediaItem)
                         .setEffects(
-                            Effects(
-                                emptyList(),
-                                videoEffects
-                            )
+                            Effects(emptyList(), videoEffects)
                         )
                         .build()
                 }
@@ -489,7 +473,7 @@ var projectStatus by remember { mutableStateOf("") }
                                         activeTransformer = null
                                         pendingExportClip = null
                                         exportStatus =
-                                            "Export complete: ${clipToExport.name} (${clipToExport.aspectRatio})."
+                                            "Export complete: ${clipToExport.name}"
                                     }
                                 } catch (exception: Exception) {
                                     outputFile.delete()
@@ -499,7 +483,7 @@ var projectStatus by remember { mutableStateOf("") }
                                         activeTransformer = null
                                         pendingExportClip = null
                                         exportStatus =
-                                            "Save failed: ${exception.message ?: "unknown error"}"
+                                            "Save failed: ${exception.message}"
                                     }
                                 }
                             }.start()
@@ -515,17 +499,16 @@ var projectStatus by remember { mutableStateOf("") }
                             activeTransformer = null
                             pendingExportClip = null
                             exportStatus =
-                                "Export failed: ${exportException.message ?: "unsupported video"}"
+                                "Export failed: ${exportException.message}"
                         }
                     })
                     .build()
 
                 activeTransformer = transformer
 
-                val compositionToExport = splitComposition
-                if (compositionToExport != null) {
+                if (splitComposition != null) {
                     transformer.start(
-                        compositionToExport,
+                        splitComposition!!,
                         outputFile.absolutePath
                     )
                 } else {
@@ -534,14 +517,13 @@ var projectStatus by remember { mutableStateOf("") }
                         outputFile.absolutePath
                     )
                 }
-
             } catch (exception: Exception) {
                 outputFile.delete()
                 isExporting = false
                 activeTransformer = null
                 pendingExportClip = null
                 exportStatus =
-                    "Export start nahi hua: ${exception.message ?: "unknown error"}"
+                    "Export start nahi hua: ${exception.message}"
             }
         }
     }
@@ -593,12 +575,13 @@ var projectStatus by remember { mutableStateOf("") }
                         isBatchExporting = false
                         activeBatchExporter = null
                         exportStatus =
-                            "ZIP save failed: ${exception.message ?: "unknown error"}"
+                            "ZIP save failed: ${exception.message}"
                     }
                 }
             }.start()
         }
     }
+
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -606,15 +589,16 @@ var projectStatus by remember { mutableStateOf("") }
             }
 
             override fun onVideoSizeChanged(
-    videoSize: androidx.media3.common.VideoSize
-) {
-    if (videoSize.height > 0 && videoSize.width > 0) {
-        sourceVideoAspectRatio =
-            videoSize.width.toFloat() *
-                videoSize.pixelWidthHeightRatio /
-                videoSize.height.toFloat()
-    }
-}
+                videoSize: androidx.media3.common.VideoSize
+            ) {
+                if (videoSize.height > 0 && videoSize.width > 0) {
+                    sourceVideoAspectRatio =
+                        videoSize.width.toFloat() *
+                            videoSize.pixelWidthHeightRatio /
+                            videoSize.height.toFloat()
+                }
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 val actualDuration = exoPlayer.duration
                 if (actualDuration > 0L) {
@@ -660,6 +644,10 @@ var projectStatus by remember { mutableStateOf("") }
         }
     }
 
+    // ─────────────────────────────────────────────
+    // CAPCUT-STYLE EDITOR: HEADER + PREVIEW + TIMELINE
+    // ─────────────────────────────────────────────
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = ClipkaBackground
@@ -668,604 +656,223 @@ var projectStatus by remember { mutableStateOf("") }
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 14.dp, vertical = 16.dp),
-verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            
-            
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = Color(0xFF1B1C24),
-                border = BorderStroke(1.dp, Color(0xFF34313F))
+            // Top editor toolbar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "CLIPKA",
-                                fontSize = 29.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = ClipkaAccent,
-                                letterSpacing = 1.sp
-                            )
+                    Text(
+                        text = "Clipka",
+                        color = Color.White,
+                        fontSize = 23.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                    Text(
+                        text = "VIDEO EDITOR",
+                        color = ClipkaAccent,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
+                }
 
-                            Text(
-                                text = "VIDEO CLIP STUDIO",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.LightGray,
-                                letterSpacing = 1.5.sp
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = Color(0xFF302944)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(
-                                    horizontal = 16.dp,
-                                    vertical = 10.dp
-                                ),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = clips.size.toString(),
-                                    color = ClipkaAccent,
-                                    fontSize = 23.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    text = "CLIPS",
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            if (undoStack.isNotEmpty()) {
+                                redoStack = redoStack + listOf(clips)
+                                clips = undoStack.last()
+                                undoStack = undoStack.dropLast(1)
+                                selectedClipId = clips.firstOrNull()?.id
+                                previewingClipId = null
+                                clipError = ""
                             }
-                        }
+                        },
+                        enabled = undoStack.isNotEmpty()
+                    ) {
+                        Text("Undo", fontSize = 11.sp)
                     }
 
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF101116)
+                    OutlinedButton(
+                        onClick = {
+                            if (redoStack.isNotEmpty()) {
+                                undoStack = undoStack + listOf(clips)
+                                clips = redoStack.last()
+                                redoStack = redoStack.dropLast(1)
+                                selectedClipId = clips.firstOrNull()?.id
+                                previewingClipId = null
+                                clipError = ""
+                            }
+                        },
+                        enabled = redoStack.isNotEmpty()
                     ) {
-                        Row(
-                            modifier = Modifier.padding(
-                                horizontal = 12.dp,
-                                vertical = 11.dp
-                            ),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(9.dp)
-                        ) {
-                            Surface(
-                                modifier = Modifier.size(9.dp),
-                                shape = RoundedCornerShape(50),
-                                color = if (videoUri != null) {
-                                    Color(0xFF75D6A0)
-                                } else {
-                                    ClipkaAccent
-                                }
-                            ) {}
-
-                            Text(
-                                text = if (videoUri != null) {
-                                    "Video ready for editing"
-                                } else {
-                                    "Choose a video to get started"
-                                },
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+                        Text("Redo", fontSize = 11.sp)
                     }
                 }
             }
 
-                        
+            // Video preview
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = Color(0xFF1B1C24),
                 border = BorderStroke(1.dp, Color(0xFF34313F))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Text(
-                                text = if (previewClip != null) {
-                                    "CLIP PREVIEW"
-                                } else {
-                                    "VIDEO PREVIEW"
-                                },
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 17.sp,
-                                letterSpacing = 0.5.sp
-                            )
-
-                            Text(
-                                text = if (previewClip != null) {
-                                    "${previewClip.aspectRatio} • ${previewClip.name}"
-                                } else {
-                                    "Original video preview"
-                                },
-                                color = Color.LightGray,
-                                fontSize = 12.sp
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF302944),
-                            border = BorderStroke(
-                                1.dp,
-                                Color(0xFF51456E)
-                            )
-                        ) {
-                            Text(
-                                text = if (previewClip != null) {
-                                    previewClip.aspectRatio
-                                } else {
-                                    "ORIGINAL"
-                                },
-                                modifier = Modifier.padding(
-                                    horizontal = 12.dp,
-                                    vertical = 9.dp
-                                ),
-                                color = ClipkaAccent,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                    }
-
-
-
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                val previewWidth = minOf(
-                    maxWidth,
-                    250.dp * previewRatio
-                )
-                val previewHeight = minOf(
-                    250.dp,
-                    previewWidth / previewRatio
-                )
-
-                Card(
-                    modifier = Modifier
-                        .width(previewWidth)
-                        .height(previewHeight),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.Black
-                    ),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    if (videoUri == null) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(52.dp),
-                                    tint = ClipkaAccent
-                                )
-                                Text(
-                                    text = "Select a video to preview",
-                                    color = Color.White
-                                )
-                            }
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            AndroidView(
-                                modifier = Modifier.fillMaxSize(),
-                                factory = { viewContext ->
-                                    PlayerView(viewContext).apply {
-                                        player = exoPlayer
-                                        useController = false
-                                        resizeMode = if (previewClip != null) {
-                                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                        } else {
-                                            AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                        }
-                                    }
-                                },
-                                update = { playerView ->
-                                    playerView.player = exoPlayer
-                                    playerView.resizeMode = if (previewClip != null) {
-                                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                                    } else {
-                                        AspectRatioFrameLayout.RESIZE_MODE_FIT
-                                    }
-                                }
-                            )
-
-                            if (previewClip != null && previewClip.frames.isNotEmpty()) {
-    FramePreviewOverlay(
-        frames = previewClip.frames,
-        modifier = Modifier.fillMaxSize(),
-        sourceVideoAspectRatio = sourceVideoAspectRatio,
-        targetAspectRatio = previewRatio
-    )
-}
-                        }
-                    }
-                }
-            }
-                    
-            Text(
-                text = if (previewClip != null) {
-                    "Previewing ${previewClip.name}: " +
-                        "${formatTime(previewClip.startMs)} - " +
-                        formatTime(previewClip.endMs)
-                } else {
-                    "Original video • No clip ratio applied"
-                },
-                color = ClipkaAccent,
-                fontSize = 12.sp
-            )
-
-                            }
-                        }
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = ClipkaCard
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "VIDEO SOURCE",
-                                color = ClipkaAccent,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-
-                            Text(
-                                text = "Import and preview",
-                                color = Color.White,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = "Video source",
-                            tint = ClipkaAccent,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        color = ClipkaBackground
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.FolderOpen,
-                                contentDescription = null,
-                                tint = ClipkaAccent,
-                                modifier = Modifier.size(22.dp)
-                            )
-
-                            Spacer(Modifier.width(10.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(3.dp)
-                            ) {
-                                Text(
-                                    text = if (videoUri != null) {
-                                        "Selected video"
-                                    } else {
-                                        "No video selected"
-                                    },
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp
-                                )
-
-                                Text(
-                                    text = videoName,
-                                    color = Color.LightGray,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = { saveProject() },
-                            enabled = videoUri != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Text("Save Project")
-                        }
-
-                        OutlinedButton(
-                            onClick = { loadProject() },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(14.dp)
-                        ) {
-                            Text("Load Project")
-                        }
-                    }
-
-                    if (projectStatus.isNotEmpty()) {
                         Text(
-                            text = projectStatus,
-                            color = if (
-                                projectStatus.contains(
-                                    "failed",
-                                    ignoreCase = true
-                                )
-                            ) {
-                                Color(0xFFFF8A80)
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = Color(0xFF1B1C24),
-                border = BorderStroke(1.dp, Color(0xFF34313F))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = Color(0xFF1B1C24),
-                border = BorderStroke(1.dp, Color(0xFF34313F))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "VIDEO SOURCE",
-                                color = ClipkaAccent,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.5.sp
-                            )
-
-                            Text(
-                                text = "Your media",
-                                color = Color.White,
-                                fontSize = 19.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = "Video source",
-                            tint = ClipkaAccent,
-                            modifier = Modifier.size(27.dp)
-                        )
-                    }
-
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFF101116),
-                        border = BorderStroke(
-                            1.dp,
-                            Color(0xFF34313F)
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                modifier = Modifier.size(42.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF302944)
-                            ) {
-                                Box(
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.FolderOpen,
-                                        contentDescription = null,
-                                        tint = ClipkaAccent,
-                                        modifier = Modifier.size(23.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.width(12.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = if (videoUri != null) {
-                                        "Selected video"
-                                    } else {
-                                        "No video selected"
-                                    },
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp
-                                )
-
-                                Text(
-                                    text = videoName,
-                                    color = Color.LightGray,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
-
-                    Button(
-                        onClick = {
-                            videoPicker.launch(arrayOf("video/*"))
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (videoUri == null) {
-                                "Choose Video"
+                            text = if (previewClip != null) {
+                                "CLIP PREVIEW"
                             } else {
-                                "Change Video"
+                                "PREVIEW"
                             },
+                            color = Color.White,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
-                    }
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = { saveProject() },
-                            enabled = videoUri != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Save Project")
-                        }
-
-                        OutlinedButton(
-                            onClick = { loadProject() },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Load Project")
-                        }
-                    }
-
-                    if (projectStatus.isNotEmpty()) {
                         Text(
-                            text = projectStatus,
-                            color = if (
-                                projectStatus.contains(
-                                    "failed",
-                                    ignoreCase = true
-                                )
-                            ) {
-                                Color(0xFFFF8A80)
-                            } else {
-                                ClipkaAccent
-                            },
-                            fontSize = 12.sp
+                            text = if (videoUri != null) videoName else "No video",
+                            color = Color.LightGray,
+                            fontSize = 11.sp,
+                            maxLines = 1
                         )
                     }
 
-                    Divider(color = Color(0xFF34313F))
+                    BoxWithConstraints(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val safeRatio = previewRatio.coerceIn(0.45f, 2.2f)
+                        val previewWidth = minOf(
+                            maxWidth,
+                            300.dp * safeRatio
+                        )
+                        val previewHeight = minOf(
+                            300.dp,
+                            previewWidth / safeRatio
+                        )
 
-                    Text(
-                        text = "PLAYBACK",
-                        color = Color.LightGray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
-                    )
+                        Card(
+                            modifier = Modifier
+                                .width(previewWidth)
+                                .height(previewHeight),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = Color.Black
+                            )
+                        ) {
+                            if (videoUri == null) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = null,
+                                            tint = ClipkaAccent,
+                                            modifier = Modifier.size(48.dp)
+                                        )
+                                        Text(
+                                            "Import a video to start",
+                                            color = Color.White,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            } else {
+                                Box(Modifier.fillMaxSize()) {
+                                    AndroidView(
+                                        modifier = Modifier.fillMaxSize(),
+                                        factory = { viewContext ->
+                                            PlayerView(viewContext).apply {
+                                                player = exoPlayer
+                                                useController = false
+                                                resizeMode =
+                                                    if (previewClip != null) {
+                                                        AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                                    } else {
+                                                        AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                                    }
+                                            }
+                                        },
+                                        update = { playerView ->
+                                            playerView.player = exoPlayer
+                                            playerView.resizeMode =
+                                                if (previewClip != null) {
+                                                    AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                                } else {
+                                                    AspectRatioFrameLayout.RESIZE_MODE_FIT
+                                                }
+                                        }
+                                    )
 
+                                    if (
+                                        previewClip != null &&
+                                        previewClip.frames.isNotEmpty()
+                                    ) {
+                                        FramePreviewOverlay(
+                                            frames = previewClip.frames,
+                                            modifier = Modifier.fillMaxSize(),
+                                            sourceVideoAspectRatio =
+                                                sourceVideoAspectRatio,
+                                            targetAspectRatio = previewRatio
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Playback controls
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        OutlinedButton(
+                            onClick = {
+                                previewingClipId = null
+                                exoPlayer.seekTo(0L)
+                                exoPlayer.pause()
+                            },
+                            enabled = videoUri != null
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Restart"
+                            )
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
                         Button(
                             onClick = {
                                 if (exoPlayer.isPlaying) {
@@ -1285,11 +892,7 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                                     exoPlayer.play()
                                 }
                             },
-                            enabled = videoUri != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
+                            enabled = videoUri != null
                         ) {
                             Icon(
                                 imageVector = if (isPlaying) {
@@ -1302,878 +905,248 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                             Spacer(Modifier.width(6.dp))
                             Text(if (isPlaying) "Pause" else "Play")
                         }
-
-                        OutlinedButton(
-                            onClick = {
-                                previewingClipId = null
-                                exoPlayer.seekTo(0L)
-                                exoPlayer.pause()
-                            },
-                            enabled = videoUri != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text("Restart")
-                        }
                     }
-                }
-            }
 
+                    Text(
+                        text = "${formatTime(positionMs)} / ${formatTime(durationMs)}",
+                        modifier = Modifier.fillMaxWidth(),
+                        color = ClipkaAccent,
+                        fontSize = 12.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
 
-                    Button(
-                        onClick = {
-                            videoPicker.launch(arrayOf("video/*"))
-                        },
+                    // Output aspect ratio
+                    Text(
+                        text = "CANVAS RATIO",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(14.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (videoUri == null) {
-                                "Choose Video"
-                            } else {
-                                "Change Video"
-                            },
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                        listOf("9:16", "1:1", "16:9").forEach { ratio ->
+                            val active = previewClip?.aspectRatio == ratio
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = { saveProject() },
-                            enabled = videoUri != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Save Project")
-                        }
+                            OutlinedButton(
+                                onClick = {
+                                    val selected = clips.firstOrNull {
+                                        it.id == selectedClipId
+                                    }
 
-                        OutlinedButton(
-                            onClick = { loadProject() },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Load Project")
-                        }
-                    }
-
-                    if (projectStatus.isNotEmpty()) {
-                        Text(
-                            text = projectStatus,
-                            color = if (
-                                projectStatus.contains(
-                                    "failed",
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = Color(0xFF1B1C24),
-                border = BorderStroke(1.dp, Color(0xFF34313F))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "VIDEO SOURCE",
-                                color = ClipkaAccent,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.5.sp
-                            )
-                            Text(
-                                text = "Your media",
-                                color = Color.White,
-                                fontSize = 19.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = "Video source",
-                            tint = ClipkaAccent,
-                            modifier = Modifier.size(27.dp)
-                        )
-                    }
-
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFF101116),
-                        border = BorderStroke(1.dp, Color(0xFF34313F))
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                modifier = Modifier.size(42.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF302944)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.FolderOpen,
-                                        contentDescription = null,
-                                        tint = ClipkaAccent,
-                                        modifier = Modifier.size(23.dp)
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = if (videoUri != null) {
-                                        "Selected video"
+                                    if (selected != null) {
+                                        applyClipChange(
+                                            selected.copy(aspectRatio = ratio)
+                                        )
                                     } else {
-                                        "No video selected"
-                                    },
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp
+                                        clipError =
+                                            "Select a clip before changing its ratio."
+                                    }
+                                },
+                                enabled = selectedClipId != null,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (active) ClipkaAccent
+                                    else Color(0xFF454550)
                                 )
+                            ) {
                                 Text(
-                                    text = videoName,
-                                    color = Color.LightGray,
+                                    text = ratio,
+                                    color = if (active) ClipkaAccent
+                                    else Color.White,
                                     fontSize = 12.sp
                                 )
                             }
                         }
                     }
 
-                    Button(
-                        onClick = {
-                            videoPicker.launch(arrayOf("video/*"))
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.width(8.dp))
+                    if (clipError.isNotBlank()) {
                         Text(
-                            text = if (videoUri == null) {
-                                "Choose Video"
-                            } else {
-                                "Change Video"
-                            },
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = { saveProject() },
-                            enabled = videoUri != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Save Project")
-                        }
-                        OutlinedButton(
-                            onClick = { loadProject() },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Load Project")
-                        }
-                    }
-
-                    if (projectStatus.isNotEmpty()) {
-                        Text(
-                            text = projectStatus,
-                            color = if (
-                                projectStatus.contains(
-                                    "failed",
-                                    ignoreCase = true
-                                )
-                            ) {
-                                Color(0xFFFF8A80)
-                            } else {
-                                ClipkaAccent
-                            },
+                            text = clipError,
+                            color = Color(0xFFFF8A80),
                             fontSize = 12.sp
                         )
                     }
+                }
+            }
 
-                    Divider(color = Color(0xFF34313F))
-
-                    Text(
-                        text = "PLAYBACK",
-                        color = Color.LightGray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                if (exoPlayer.isPlaying) {
-                                    exoPlayer.pause()
-                                } else if (videoUri != null) {
-                                    val activeClip = clips.firstOrNull {
-
+            // Timeline
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = Color(0xFF1B1C24),
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0xFF191A22),
                 border = BorderStroke(1.dp, Color(0xFF34313F))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "VIDEO SOURCE",
-                                color = ClipkaAccent,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.5.sp
-                            )
-                            Text(
-                                text = "Your media",
-                                color = Color.White,
-                                fontSize = 19.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Icon(
-                            imageVector = Icons.Default.FolderOpen,
-                            contentDescription = "Video source",
-                            tint = ClipkaAccent,
-                            modifier = Modifier.size(27.dp)
+                        Text(
+                            "TIMELINE",
+                            color = ClipkaAccent,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "${clips.size} clips",
+                            color = Color.LightGray,
+                            fontSize = 12.sp
                         )
                     }
 
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFF101116),
-                        border = BorderStroke(1.dp, Color(0xFF34313F))
-                    ) {
+                    Slider(
+                        value = if (isSeeking) {
+                            seekValue
+                        } else if (durationMs > 0L) {
+                            (positionMs.toFloat() / durationMs)
+                                .coerceIn(0f, 1f)
+                        } else {
+                            0f
+                        },
+                        onValueChange = { value ->
+                            isSeeking = true
+                            seekValue = value
+                        },
+                        onValueChangeFinished = {
+                            if (durationMs > 0L) {
+                                previewingClipId = null
+                                exoPlayer.seekTo(
+                                    (seekValue * durationMs).toLong()
+                                )
+                            }
+                            isSeeking = false
+                        },
+                        enabled = videoUri != null && durationMs > 0L
+                    )
+
+                    Text(
+                        "VIDEO TRACK",
+                        color = Color.LightGray,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    if (clips.isEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            color = ClipkaBackground
+                        ) {
+                            Text(
+                                text = "Your clips will appear here",
+                                modifier = Modifier.padding(14.dp),
+                                color = Color.LightGray,
+                                fontSize = 12.sp
+                            )
+                        }
+                    } else {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Surface(
-                                modifier = Modifier.size(42.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF302944)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.FolderOpen,
-                                        contentDescription = null,
-                                        tint = ClipkaAccent,
-                                        modifier = Modifier.size(23.dp)
-                                    )
-                                }
-                            }
+                            clips.forEachIndexed { index, segment ->
+                                val selected =
+                                    segment.id == selectedClipId
 
-                            Spacer(Modifier.width(12.dp))
-
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = if (videoUri != null) {
-                                        "Selected video"
+                                Surface(
+                                    modifier = Modifier
+                                        .width(145.dp)
+                                        .border(
+                                            width = if (selected) 2.dp else 1.dp,
+                                            color = if (selected) {
+                                                ClipkaAccent
+                                            } else {
+                                                Color(0xFF393944)
+                                            },
+                                            shape = RoundedCornerShape(10.dp)
+                                        ),
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (selected) {
+                                        Color(0xFF302944)
                                     } else {
-                                        "No video selected"
-                                    },
-                                    color = Color.White,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    text = videoName,
-                                    color = Color.LightGray,
-                                    fontSize = 12.sp
-
-                    Divider(color = Color(0xFF34313F))
-
-                    Text(
-                        text = "PLAYBACK",
-                        color = Color.LightGray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.2.sp
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                if (exoPlayer.isPlaying) {
-                                    exoPlayer.pause()
-                                } else if (videoUri != null) {
-                                    val activeClip = clips.firstOrNull {
-                                        it.id == previewingClipId
+                                        ClipkaBackground
                                     }
-
-                                    if (
-                                        activeClip != null &&
-                                        exoPlayer.currentPosition >= activeClip.endMs
-                                    ) {
-                                        exoPlayer.seekTo(activeClip.startMs)
-                                    }
-
-                                    exoPlayer.play()
-                                }
-                            },
-                            enabled = videoUri != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-if (projectStatus.isNotEmpty()) {
-                    Text(
-                        text = projectStatus,
-                        color = if (
-                            projectStatus.contains(
-                                "failed",
-                                ignoreCase = true
-                            )
-                        ) {
-                            Color(0xFFFF8A80)
-                        } else {
-                            ClipkaAccent
-                        },
-                        fontSize = 12.sp
-                    )
-                }
-
-                Divider(color = Color(0xFF34313F))
-
-                Text(
-                    text = "PLAYBACK",
-                    color = Color.LightGray,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.2.sp
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            if (exoPlayer.isPlaying) {
-                                exoPlayer.pause()
-                            } else if (videoUri != null) {
-                                val activeClip = clips.firstOrNull {
-                                    it.id == previewingClipId
-                                }
-
-                                if (
-                                    activeClip != null &&
-                                    (
-                                        exoPlayer.currentPosition < activeClip.startMs ||
-                                        exoPlayer.currentPosition >= activeClip.endMs
-                                    )
                                 ) {
-                                    exoPlayer.seekTo(activeClip.startMs)
+                                    Column(
+                                        modifier = Modifier
+                                            .padding(10.dp),
+                                        verticalArrangement =
+                                            Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            "CLIP ${index + 1}",
+                                            color = ClipkaAccent,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            segment.name,
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            maxLines = 2
+                                        )
+                                        Text(
+                                            "${formatTime(segment.startMs)} – " +
+                                                formatTime(segment.endMs),
+                                            color = Color.LightGray,
+                                            fontSize = 10.sp
+                                        )
+                                        OutlinedButton(
+                                            onClick = {
+                                                showClipInPreview(segment, false)
+                                            },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Text(
+                                                if (selected) "Selected"
+                                                else "Select clip",
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                    }
                                 }
-
-                                exoPlayer.play()
                             }
-                        },
-                        enabled = videoUri != null,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isPlaying) {
-                                Icons.Default.Pause
-                            } else {
-                                Icons.Default.PlayArrow
-                            },
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(if (isPlaying) "Pause" else "Play")
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            previewingClipId = null
-                            exoPlayer.pause()
-                            exoPlayer.seekTo(0L)
-                        },
-                        enabled = videoUri != null,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text("Restart")
+                        }
                     }
                 }
             }
-        }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = Color(0xFF101116)
-    ) {
-        Text(
-            "Add a clip to start editing your timeline",
-            modifier = Modifier.padding(14.dp),
-            color = Color.LightGray,
-            fontSize = 12.sp
-        )
-    }
-} else {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        clips.forEachIndexed { index, segment ->
-            val selected = segment.id == selectedClipId
 
+            // ─────────────────────────────────────
+            // CLIP TRIM & ADD CLIP
+            // ─────────────────────────────────────
             Surface(
-                modifier = Modifier
-                    .width(165.dp)
-                    .border(
-                        width = if (selected) 2.dp else 1.dp,
-                        color = if (selected) {
-                            ClipkaAccent
-                        } else {
-                            Color(0xFF393944)
-                        },
-                        shape = RoundedCornerShape(12.dp)
-                    ),
-                shape = RoundedCornerShape(12.dp),
-                color = if (selected) {
-                    Color(0xFF302944)
-                } else {
-                    Color(0xFF101116)
-                }
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = ClipkaCard
             ) {
                 Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "CLIP ${index + 1}",
+                        "EDIT CLIP",
                         color = ClipkaAccent,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold
                     )
 
                     Text(
-                        segment.name,
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 2
-                    )
-
-                    Text(
-                        "${formatTime(segment.startMs)} – " +
-                            formatTime(segment.endMs),
-                        color = Color.LightGray,
-                        fontSize = 11.sp
-                    )
-
-                    OutlinedButton(
-                        onClick = {
-                            showClipInPreview(segment, false)
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            if (selected) "Selected" else "Preview clip",
-                            fontSize = 11.sp
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-                        
-                    
-                
-          
-
-
-
-                
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = ClipkaCard
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "EXPORT CLIPS",
-                        color = ClipkaAccent,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-
-                    Text(
-                        text = "Save your edited videos",
-                        color = Color.White,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Text(
-    "Export the selected clip as an MP4 video.",
-    color = Color.LightGray,
-                        fontSize = 12.sp
-                    )
-
-                    Button(
-                        onClick = {
-                            val clip = clips.firstOrNull {
-                                it.id == selectedClipId
-                            }
-
-                            if (
-                                clip != null &&
-                                videoUri != null &&
-                                !isExporting &&
-                                !isBatchExporting
-                            ) {
-                                pendingExportClip = clip
-                                exportDestinationPicker.launch(
-                                    "${clip.name.replace(Regex("[^A-Za-z0-9_-]"), "_")}.mp4"
-                                )
-                            }
-                        },
-                        enabled = videoUri != null &&
-                            selectedClipId != null &&
-                            !isExporting &&
-                            !isBatchExporting,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text(
-                            if (isExporting) {
-                                "Exporting MP4..."
-                            } else {
-                                "Export Selected Clip (MP4)"
-                            },
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    Divider(color = Color.DarkGray)
-
-                    Text(
-    "Export every clip together in one ZIP archive.",
-    color = Color.LightGray,
-                       ) 
-
-                    OutlinedButton(
-                        onClick = {
-                            val sourceUri = videoUri
-                            val clipsToExport = clips.toList()
-
-                            if (
-                                sourceUri != null &&
-                                clipsToExport.isNotEmpty() &&
-                                !isExporting &&
-                                !isBatchExporting
-                            ) {
-                                exoPlayer.pause()
-                                isPlaying = false
-                                isBatchExporting = true
-                                exportStatus = "ZIP export shuru ho raha hai..."
-
-                                val exporter = BatchZipExporter(
-                                    context = context,
-                                    sourceUri = sourceUri,
-                                    clips = clipsToExport,
-                                    onProgress = { message ->
-                                        Handler(Looper.getMainLooper()).post {
-                                            exportStatus = message
-                                        }
-                                    },
-                                    onComplete = { zipFile ->
-                                        activeBatchExporter = null
-
-                                        if (zipFile == null) {
-                                            isBatchExporting = false
-
-                                            if (
-                                                !exportStatus.startsWith("Failed:") &&
-                                                !exportStatus.startsWith("ZIP failed:")
-                                            ) {
-                                                exportStatus =
-                                                    "ZIP export fail hua. Status check karo."
-                                            }
-                                        } else {
-                                            pendingZipFile = zipFile
-                                            zipDestinationPicker.launch(
-                                                "Clipka_Clips.zip"
-                                            )
-                                        }
-                                    }
-                                )
-
-                                activeBatchExporter = exporter
-                                exporter.start()
-                            }
-                        },
-                        enabled = videoUri != null &&
-                            clips.isNotEmpty() &&
-                            !isExporting &&
-                            !isBatchExporting,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Text(
-                            if (isBatchExporting) {
-                                "Exporting Clips / ZIP..."
-                            } else {
-                                "Export All Clips (ZIP)"
-                            },
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    if (exportStatus.isNotEmpty()) {
-                        Text(
-                            text = exportStatus,
-                            color = if (
-                                exportStatus.startsWith("Export complete")
-                            ) {
-                                ClipkaAccent
-                            } else {
-                                Color.LightGray
-                            },
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            }
-
-
-            
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = ClipkaCard
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "CLIP EDITOR",
-                        color = ClipkaAccent,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-
-                 
-                        Text(
-    "Trim, organize and prepare clips for export",
-    color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Text(
-                        text = "Undo or redo your latest clip changes.",
-                        color = Color.LightGray,
-                        fontSize = 12.sp
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                if (undoStack.isNotEmpty()) {
-                                    val previousClips = undoStack.last()
-
-                                    redoStack = redoStack + listOf(clips)
-                                    undoStack = undoStack.dropLast(1)
-                                    clips = previousClips
-
-                                    if (clips.none { it.id == selectedClipId }) {
-                                        selectedClipId = null
-                                        startInput = "00:00"
-                                        endInput = "00:30"
-                                    }
-
-                                    if (clips.none { it.id == previewingClipId }) {
-                                        previewingClipId = null
-                                    }
-
-                                    clipError = ""
-                                }
-                            },
-                            enabled = undoStack.isNotEmpty(),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("↶  Undo")
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                if (redoStack.isNotEmpty()) {
-                                    val nextClips = redoStack.last()
-
-                                    undoStack = undoStack + listOf(clips)
-                                    redoStack = redoStack.dropLast(1)
-                                    clips = nextClips
-
-                                    if (clips.none { it.id == selectedClipId }) {
-                                        selectedClipId = null
-                                        startInput = "00:00"
-                                        endInput = "00:30"
-                                    }
-
-                                    if (clips.none { it.id == previewingClipId }) {
-                                        previewingClipId = null
-                                    }
-
-                                    clipError = ""
-                                }
-                            },
-                            enabled = redoStack.isNotEmpty(),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(46.dp),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Text("Redo  ↷")
-                        }
-                    }
-                }
-            }
-
-
-            
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = ClipkaCard
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "CLIP TRIM",
-                        color = ClipkaAccent,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-
-                    Text(
-                        text = "Set clip boundaries",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Text(
-                        text = "Time format: MM:SS or HH:MM:SS",
+                        "Set the start and end time",
                         color = Color.LightGray,
                         fontSize = 12.sp
                     )
@@ -2185,7 +1158,7 @@ if (projectStatus.isNotEmpty()) {
                         OutlinedTextField(
                             value = startInput,
                             onValueChange = { startInput = it },
-                            label = { Text("Start time") },
+                            label = { Text("Start (MM:SS)") },
                             modifier = Modifier.weight(1f),
                             singleLine = true
                         )
@@ -2193,7 +1166,7 @@ if (projectStatus.isNotEmpty()) {
                         OutlinedTextField(
                             value = endInput,
                             onValueChange = { endInput = it },
-                            label = { Text("End time") },
+                            label = { Text("End (MM:SS)") },
                             modifier = Modifier.weight(1f),
                             singleLine = true
                         )
@@ -2216,43 +1189,43 @@ if (projectStatus.isNotEmpty()) {
                                 startTime != null &&
                                 endTime != null
                             ) {
-                                val newSegment = ClipSegment(
+                                val newClip = ClipSegment(
                                     name = "Clip ${clips.size + 1}",
                                     startMs = startTime,
                                     endMs = endTime,
                                     aspectRatio = "9:16"
                                 )
 
-                                applyClipChange(clips + newSegment)
-                                selectedClipId = newSegment.id
-                                previewingClipId = newSegment.id
+                                applyClipChange(clips + newClip)
+                                selectedClipId = newClip.id
+                                previewingClipId = newClip.id
                                 exoPlayer.pause()
-                                exoPlayer.seekTo(newSegment.startMs)
+                                exoPlayer.seekTo(newClip.startMs)
                             }
                         },
-                        enabled = videoUri != null,
+                        enabled = videoUri != null &&
+                            durationMs > 0L &&
+                            !isExporting &&
+                            !isBatchExporting,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp)
+                            .height(48.dp)
                     ) {
-                        Text("＋  Add Clip")
+                        Text("+ Add Clip")
                     }
 
                     OutlinedButton(
                         onClick = {
-                            val selectedSegment = clips.firstOrNull {
+                            val selected = clips.firstOrNull {
                                 it.id == selectedClipId
                             }
-
                             val startTime = parseTime(startInput)
                             val endTime = parseTime(endInput)
 
-                            clipError = when {
-                                selectedSegment == null ->
-                                    "Pehle list se clip select karo."
-
-                                else -> validateClipTimes(
+                            clipError = if (selected == null) {
+                                "Select a clip first."
+                            } else {
+                                validateClipTimes(
                                     startMs = startTime,
                                     endMs = endTime,
                                     videoDurationMs = durationMs,
@@ -2262,439 +1235,373 @@ if (projectStatus.isNotEmpty()) {
 
                             if (
                                 clipError.isEmpty() &&
-                                selectedSegment != null &&
+                                selected != null &&
                                 startTime != null &&
                                 endTime != null
                             ) {
-                                val updatedSegment = selectedSegment.copy(
+                                val updated = selected.copy(
                                     startMs = startTime,
                                     endMs = endTime
                                 )
 
                                 applyClipChange(
-                                    clips.map { segment ->
-                                        if (segment.id == updatedSegment.id) {
-                                            updatedSegment
-                                        } else {
-                                            segment
-                                        }
+                                    clips.map {
+                                        if (it.id == updated.id) updated else it
                                     }
                                 )
 
-                                selectedClipId = updatedSegment.id
-                                previewingClipId = updatedSegment.id
+                                selectedClipId = updated.id
+                                previewingClipId = updated.id
                                 exoPlayer.pause()
-                                exoPlayer.seekTo(updatedSegment.startMs)
+                                exoPlayer.seekTo(updated.startMs)
                             }
                         },
-                        enabled = selectedClipId != null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp),
-                        shape = RoundedCornerShape(12.dp)
+                        enabled = selectedClipId != null &&
+                            !isExporting &&
+                            !isBatchExporting,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Save Edit")
+                        Text("Save Trim")
                     }
 
-                    if (clipError.isNotEmpty()) {
+                    if (clipError.isNotBlank()) {
                         Text(
-                            text = clipError,
-                            color = Color(0xFFFF7777),
-                            fontSize = 13.sp
+                            clipError,
+                            color = Color(0xFFFF8A80),
+                            fontSize = 12.sp
                         )
                     }
                 }
             }
 
-
-            
+            // ─────────────────────────────────────
+            // CLIP LIST
+            // ─────────────────────────────────────
             Text(
-                text = "MY CLIPS  •  ${clips.size}",
+                "MY CLIPS (${clips.size})",
                 color = ClipkaAccent,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
             )
 
             if (clips.isEmpty()) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = ClipkaCard
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "No clips yet",
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Text(
-    "Choose a video, set start and end times, then tap Add Clip.",
-    color = Color.LightGray,
-    fontSize = 13.sp
-)
-                    }
-                }
+                Text(
+                    "Your added clips will appear here.",
+                    color = Color.LightGray,
+                    fontSize = 12.sp
+                )
             }
 
-
-            clips.forEach { segment ->
-                val isSelected = segment.id == selectedClipId
-                val isPreviewing = segment.id == previewingClipId
+            clips.forEachIndexed { index, clip ->
+                val selected = clip.id == selectedClipId
+                val playingPreview = clip.id == previewingClipId
 
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .border(
-                            width = if (isSelected) 2.dp else 0.dp,
-                            color = if (isSelected) {
+                            width = if (selected) 2.dp else 1.dp,
+                            color = if (selected) {
                                 ClipkaAccent
                             } else {
-                                Color.Transparent
+                                Color(0xFF353541)
                             },
                             shape = RoundedCornerShape(14.dp)
                         ),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) {
-                            Color(0xFF29253B)
-                        } else {
-                            ClipkaCard
-                        }
+                        containerColor = ClipkaCard
                     )
                 ) {
-                    
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = segment.name,
-                                    color = Color.White,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Text(
-                                    text = if (isSelected) {
-                                        "SELECTED CLIP"
-                                    } else {
-                                        "VIDEO CLIP"
-                                    },
-                                    color = if (isSelected) {
-                                        ClipkaAccent
-                                    } else {
-                                        Color.LightGray
-                                    },
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFF353044)
-                            ) {
-                                Text(
-                                    text = formatTime(segment.durationMs),
-                                    modifier = Modifier.padding(
-                                        horizontal = 10.dp,
-                                        vertical = 7.dp
-                                    ),
-                                    color = ClipkaAccent,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
-
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF15161D)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "START",
-                                        color = Color.LightGray,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = formatTime(segment.startMs),
-                                        color = Color.White,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-
-                                Text(
-                                    text = "→",
-                                    color = ClipkaAccent,
-                                    fontSize = 20.sp
-                                )
-
-                                Column {
-                                    Text(
-                                        text = "END",
-                                        color = Color.LightGray,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = formatTime(segment.endMs),
-                                        color = Color.White,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            "CLIP ${index + 1}  •  ${clip.name}",
+                            color = if (selected) ClipkaAccent else Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
 
                         Text(
-                            text = "OUTPUT ASPECT RATIO",
+                            "${formatTime(clip.startMs)} – " +
+                                "${formatTime(clip.endMs)}  •  " +
+                                "${formatTime(clip.durationMs)}",
                             color = Color.LightGray,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
+                            fontSize = 12.sp
+                        )
+
+                        Text(
+                            "Ratio: ${clip.aspectRatio}  |  Layout: ${clip.frameLayout}",
+                            color = Color.LightGray,
+                            fontSize = 11.sp
                         )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf("9:16", "1:1", "16:9").forEach { ratio ->
-                                val ratioSelected = segment.aspectRatio == ratio
-
-                                if (ratioSelected) {
-                                    Button(
-                                        onClick = {
-                                            applyClipChange(
-                                                clips.map { item ->
-                                                    if (item.id == segment.id) {
-                                                        item.copy(aspectRatio = ratio)
-                                                    } else {
-                                                        item
-                                                    }
-                                                }
-                                            )
-                                        },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(42.dp),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) {
-                                        Text(ratio)
-                                    }
-                                } else {
-                                    OutlinedButton(
-                                        onClick = {
-                                            applyClipChange(
-                                                clips.map { item ->
-                                                    if (item.id == segment.id) {
-                                                        item.copy(aspectRatio = ratio)
-                                                    } else {
-                                                        item
-                                                    }
-                                                }
-                                            )
-                                        },
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .height(42.dp),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) {
-                                        Text(ratio)
-                                    }
-                                }
-                            }
-                        }
-                        
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFF15161D),
-                            border = BorderStroke(
-                                1.dp,
-                                Color(0xFF393344)
-                            )
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalArrangement =
-                                    Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = "CLIP FRAMING",
-                                    color = ClipkaAccent,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
-                                )
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement =
-                                        Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = "LAYOUT",
-                                            color = Color.LightGray,
-                                            fontSize = 10.sp
-                                        )
-                                        Text(
-                                            text = when (segment.frameLayout) {
-                                                "SPLIT_VERTICAL" -> "Vertical 50/50"
-                                                "SPLIT_60_40" -> "Split 60/40"
-                                                "SPLIT_40_60" -> "Split 40/60"
-                                                "SPLIT_HORIZONTAL" -> "Horizontal"
-                                                "SPLIT_DIAGONAL" -> "Diagonal"
-                                                "CUSTOM" -> "Custom"
-                                                else -> "Single"
-                                            },
-                                            color = Color.White,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-
-                                    Column(
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Text(
-                                            text = "FRAME REGIONS",
-                                            color = Color.LightGray,
-                                            fontSize = 10.sp
-                                        )
-                                        Text(
-                                            text = "${segment.frames.size} saved",
-                                            color = Color.White,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                }
-
-                                Text(
-                                    text = if (segment.frames.isEmpty()) {
-                                        "No framing regions saved. Use Edit to set speaker framing."
-                                    } else {
-                                        "Framing settings saved for this clip."
-                                    },
-                                    color = Color.LightGray,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             OutlinedButton(
                                 onClick = {
-                                    showClipInPreview(segment, play = false)
+                                    selectedClipId = clip.id
+                                    startInput = formatTime(clip.startMs)
+                                    endInput = formatTime(clip.endMs)
+                                    showClipInPreview(clip, false)
                                 },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(42.dp),
-                                shape = RoundedCornerShape(10.dp)
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Text("Edit")
+                                Text("Edit", fontSize = 11.sp)
                             }
 
                             OutlinedButton(
                                 onClick = {
                                     applyClipChange(
-                                        clips.filterNot { item ->
-                                            item.id == segment.id
-                                        }
+                                        clips.filterNot { it.id == clip.id }
                                     )
 
-                                    if (selectedClipId == segment.id) {
+                                    if (selectedClipId == clip.id) {
                                         selectedClipId = null
                                         startInput = "00:00"
                                         endInput = "00:30"
                                     }
 
-                                    if (previewingClipId == segment.id) {
+                                    if (previewingClipId == clip.id) {
                                         previewingClipId = null
                                         exoPlayer.pause()
                                     }
                                 },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(42.dp),
-                                shape = RoundedCornerShape(10.dp)
+                                enabled = !isExporting && !isBatchExporting,
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Text("Delete")
+                                Text("Delete", fontSize = 11.sp)
                             }
 
                             Button(
                                 onClick = {
-                                    showClipInPreview(segment, play = true)
+                                    selectedClipId = clip.id
+                                    startInput = formatTime(clip.startMs)
+                                    endInput = formatTime(clip.endMs)
+                                    showClipInPreview(clip, true)
                                 },
                                 enabled = videoUri != null,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(42.dp),
-                                shape = RoundedCornerShape(10.dp)
+                                modifier = Modifier.weight(1f)
                             ) {
                                 Text(
-                                    if (isPreviewing && isPlaying) {
+                                    if (playingPreview && isPlaying) {
                                         "Playing"
                                     } else {
                                         "Preview"
-                                    }
+                                    },
+                                    fontSize = 10.sp
                                 )
                             }
                         }
 
-                        if (isPreviewing) {
-                            Text(
-                                text = "●  Currently shown in main preview",
-                                color = ClipkaAccent,
-                                fontSize = 12.sp
-                            )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("9:16", "1:1", "16:9").forEach { ratio ->
+                                OutlinedButton(
+                                    onClick = {
+                                        applyClipChange(
+                                            clips.map {
+                                                if (it.id == clip.id) {
+                                                    it.copy(aspectRatio = ratio)
+                                                } else {
+                                                    it
+                                                }
+                                            }
+                                        )
+                                    }
+                                ) {
+                                    Text(
+                                        ratio,
+                                        color = if (clip.aspectRatio == ratio) {
+                                            ClipkaAccent
+                                        } else {
+                                            Color.White
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
-                } 
-            } 
+                }
+            }
 
+            // ─────────────────────────────────────
+            // EXPORT
+            // ─────────────────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = ClipkaCard
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        "EXPORT",
+                        color = ClipkaAccent,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        "Export selected clip as MP4 or export all clips as ZIP.",
+                        color = Color.LightGray,
+                        fontSize = 12.sp
+                    )
+
+                    Button(
+                        onClick = {
+                            val clip = clips.firstOrNull {
+                                it.id == selectedClipId
+                            }
+
+                            if (
+                                clip != null &&
+                                videoUri != null &&
+                                !isExporting &&
+                                !isBatchExporting
+                            ) {
+                                pendingExportClip = clip
+                                exoPlayer.pause()
+                                exportDestinationPicker.launch(
+                                    "${clip.name.replace(
+                                        Regex("[^A-Za-z0-9_-]"),
+                                        "_"
+                                    )}.mp4"
+                                )
+                            }
+                        },
+                        enabled = videoUri != null &&
+                            selectedClipId != null &&
+                            !isExporting &&
+                            !isBatchExporting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text(
+                            if (isExporting) "Exporting MP4…" else "Export Selected MP4"
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val sourceUri = videoUri
+                            val clipsToExport = clips.toList()
+
+                            if (
+                                sourceUri != null &&
+                                clipsToExport.isNotEmpty() &&
+                                !isExporting &&
+                                !isBatchExporting
+                            ) {
+                                exoPlayer.pause()
+                                isPlaying = false
+                                isBatchExporting = true
+                                exportStatus = "Preparing ZIP export…"
+
+                                val exporter = BatchZipExporter(
+                                    context = context,
+                                    sourceUri = sourceUri,
+                                    clips = clipsToExport,
+                                    onProgress = { message ->
+                                        Handler(Looper.getMainLooper()).post {
+                                            exportStatus = message
+                                        }
+                                    },
+                                    onComplete = { zipFile ->
+                                        activeBatchExporter = null
+
+                                        if (zipFile == null) {
+                                            isBatchExporting = false
+                                            if (
+                                                !exportStatus.startsWith("Failed:") &&
+                                                !exportStatus.startsWith("ZIP failed:")
+                                            ) {
+                                                exportStatus = "ZIP export failed."
+                                            }
+                                        } else {
+                                            pendingZipFile = zipFile
+                                            zipDestinationPicker.launch(
+                                                "Clipka_Clips.zip"
+                                            )
+                                        }
+                                    }
+                                )
+
+                                activeBatchExporter = exporter
+                                exporter.start()
+                            }
+                        },
+                        enabled = videoUri != null &&
+                            clips.isNotEmpty() &&
+                            !isExporting &&
+                            !isBatchExporting,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text(
+                            if (isBatchExporting) {
+                                "Exporting ZIP…"
+                            } else {
+                                "Export All Clips (ZIP)"
+                            }
+                        )
+                    }
+
+                    if (exportStatus.isNotBlank()) {
+                        Text(
+                            exportStatus,
+                            color = ClipkaAccent,
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    // Save and load project
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = { saveProject() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Save Project")
+                        }
+
+                        OutlinedButton(
+                            onClick = { loadProject() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("Load Project")
+                        }
+                    }
+
+                    if (projectStatus.isNotBlank()) {
+                        Text(
+                            projectStatus,
+                            color = Color.LightGray,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            // ─────────────────────────────────────
+            // FRAME & FACE EDITOR
+            // ─────────────────────────────────────
             val frameEditorClip = clips.firstOrNull {
                 it.id == selectedClipId
             }
 
-            
             if (frameEditorClip != null) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -2722,13 +1629,11 @@ if (projectStatus.isNotEmpty()) {
                             fontWeight = FontWeight.SemiBold
                         )
 
-                        
-Text(
-    text = "Analyze faces in this clip, then adjust speaker framing and split-screen layout below.",
-    color = Color.LightGray,
-    fontSize = 13.sp
-)
-
+                        Text(
+                            text = "Detect faces, then adjust speaker framing and split-screen layout.",
+                            color = Color.LightGray,
+                            fontSize = 13.sp
+                        )
 
                         Button(
                             onClick = {
@@ -2736,10 +1641,12 @@ Text(
                                 val clip = frameEditorClip
 
                                 if (sourceUri == null) {
-                                    faceDetectionStatus = "Pehle video select karo."
+                                    faceDetectionStatus =
+                                        "Pehle video select karo."
                                 } else if (!isDetectingFaces) {
                                     isDetectingFaces = true
-                                    faceDetectionStatus = "Faces detect ho rahe hain..."
+                                    faceDetectionStatus =
+                                        "Faces detect ho rahe hain..."
 
                                     faceDetectionScope.launch {
                                         try {
@@ -2755,38 +1662,40 @@ Text(
                                                 faceDetectionStatus =
                                                     "Koi face nahi mila. Doosra clip try karo."
                                             } else {
-                                                
-val updatedLayout = when {
-    detectedFrames.size >= 2 -> "SPLIT_VERTICAL"
-    else -> "SINGLE"
-}
+                                                val updatedLayout =
+                                                    if (detectedFrames.size >= 2) {
+                                                        "SPLIT_VERTICAL"
+                                                    } else {
+                                                        "SINGLE"
+                                                    }
 
-val framesForLayout = if (detectedFrames.size >= 2) {
-    detectedFrames.take(2)
-} else {
-    detectedFrames
-}
+                                                val framesForLayout =
+                                                    if (detectedFrames.size >= 2) {
+                                                        detectedFrames.take(2)
+                                                    } else {
+                                                        detectedFrames
+                                                    }
 
-applyClipChange(
-    clips.map { item ->
-        if (item.id == clip.id) {
-            item.copy(
-                frames = framesForLayout,
-                frameLayout = updatedLayout
-            )
-        } else {
-            item
-        }
-    }
-)
-
+                                                applyClipChange(
+                                                    clips.map { item ->
+                                                        if (item.id == clip.id) {
+                                                            item.copy(
+                                                                frames = framesForLayout,
+                                                                frameLayout = updatedLayout
+                                                            )
+                                                        } else {
+                                                            item
+                                                        }
+                                                    }
+                                                )
 
                                                 faceDetectionStatus =
                                                     "${detectedFrames.size} face(s) detected."
                                             }
                                         } catch (error: Exception) {
                                             faceDetectionStatus =
-                                                "Detection failed: ${error.message ?: "unknown error"}"
+                                                "Detection failed: " +
+                                                    (error.message ?: "unknown error")
                                         } finally {
                                             isDetectingFaces = false
                                         }
@@ -2850,56 +1759,58 @@ applyClipChange(
                 }
             }
 
+            // ─────────────────────────────────────
+            // EXPORT TIP
+            // ─────────────────────────────────────
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFF211E2B),
+                border = BorderStroke(
+                    1.dp,
+                    Color(0xFF393344)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Text(
+                        text = "TIP",
+                        color = ClipkaAccent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
 
-                        
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            color = Color(0xFF211E2B),
-                            border = BorderStroke(
-                                1.dp,
-                                Color(0xFF393344)
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(14.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Text(
-                                    text = "TIP",
-                                    color = ClipkaAccent,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Export each clip your way",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
 
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(
-                                        text = "Export each clip your way",
-                                        color = Color.White,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    Text(
-                                        text = "Choose each clip's aspect ratio, then export individual MP4 files or a ZIP batch.",
-                                        color = Color.LightGray,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-                        }
+                        Text(
+                            text = "Choose each clip's aspect ratio, then export individual MP4 files or a ZIP batch.",
+                            color = Color.LightGray,
+                            fontSize = 12.sp
+                        )
                     }
                 }
             }
         }
+    }
 }
 
+// ─────────────────────────────────────────────
+// CLIP TIME VALIDATION
+// ─────────────────────────────────────────────
 private fun validateClipTimes(
     startMs: Long?,
     endMs: Long?,
@@ -2929,6 +1840,10 @@ private fun validateClipTimes(
     }
 }
 
+// ─────────────────────────────────────────────
+// TIME PARSER
+// Accepts MM:SS or H:MM:SS
+// ─────────────────────────────────────────────
 private fun parseTime(value: String): Long? {
     val parts = value.trim().split(":")
 
@@ -2956,6 +1871,9 @@ private fun parseTime(value: String): Long? {
     return totalSeconds * 1000L
 }
 
+// ─────────────────────────────────────────────
+// TIME FORMATTER
+// ─────────────────────────────────────────────
 private fun formatTime(milliseconds: Long): String {
     val totalSeconds = (milliseconds / 1000L).coerceAtLeast(0L)
     val hours = totalSeconds / 3600L
@@ -2968,5 +1886,3 @@ private fun formatTime(milliseconds: Long): String {
         "%02d:%02d".format(minutes, seconds)
     }
 }
-
-                        
