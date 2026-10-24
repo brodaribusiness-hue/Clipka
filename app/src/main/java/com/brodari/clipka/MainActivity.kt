@@ -1694,129 +1694,99 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Icon(
-                                imageVector = if (isPlaying) {
-                                    Icons.Default.Pause
-                                } else {
-                                    Icons.Default.PlayArrow
-                                },
-                                contentDescription = null
+if (projectStatus.isNotEmpty()) {
+                    Text(
+                        text = projectStatus,
+                        color = if (
+                            projectStatus.contains(
+                                "failed",
+                                ignoreCase = true
                             )
-                            Spacer(Modifier.width(6.dp))
-                            Text(if (isPlaying) "Pause" else "Play")
-                        }
-
-                        OutlinedButton(
-                            onClick = {
-                                previewingClipId = null
-                                exoPlayer.seekTo(0L)
-                                exoPlayer.pause()
-                            },
-                            enabled = videoUri != null,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text("Restart")
-                        }
+                            Color(0xFFFF8A80)
+                        } else {
+                            ClipkaAccent
+                        },
+                        fontSize = 12.sp
+                    )
+                }
+
+                Divider(color = Color(0xFF34313F))
+
+                Text(
+                    text = "PLAYBACK",
+                    color = Color.LightGray,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (exoPlayer.isPlaying) {
+                                exoPlayer.pause()
+                            } else if (videoUri != null) {
+                                val activeClip = clips.firstOrNull {
+                                    it.id == previewingClipId
+                                }
+
+                                if (
+                                    activeClip != null &&
+                                    (
+                                        exoPlayer.currentPosition < activeClip.startMs ||
+                                        exoPlayer.currentPosition >= activeClip.endMs
+                                    )
+                                ) {
+                                    exoPlayer.seekTo(activeClip.startMs)
+                                }
+
+                                exoPlayer.play()
+                            }
+                        },
+                        enabled = videoUri != null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) {
+                                Icons.Default.Pause
+                            } else {
+                                Icons.Default.PlayArrow
+                            },
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (isPlaying) "Pause" else "Play")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            previewingClipId = null
+                            exoPlayer.pause()
+                            exoPlayer.seekTo(0L)
+                        },
+                        enabled = videoUri != null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Restart")
                     }
                 }
             }
-
-
-            
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = Color(0xFF191A22)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "TIMELINE",
-                            color = ClipkaAccent,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            "${clips.size} clips",
-                            color = Color.LightGray,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            formatTime(
-                                if (isSeeking && durationMs > 0L) {
-                                    (seekValue * durationMs).toLong()
-                                } else {
-                                    positionMs
-                                }
-                            ),
-                            color = ClipkaAccent,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Text(
-                            formatTime(durationMs),
-                            color = Color.LightGray,
-                            fontSize = 13.sp
-                        )
-                    }
-
-                    Slider(
-                        value = if (isSeeking) {
-                            seekValue
-                        } else if (durationMs > 0L) {
-                            (positionMs.toFloat() / durationMs)
-                                .coerceIn(0f, 1f)
-                        } else {
-                            0f
-                        },
-                        onValueChange = { value ->
-                            isSeeking = true
-                            seekValue = value
-                        },
-                        onValueChangeFinished = {
-                            if (durationMs > 0L) {
-                                previewingClipId = null
-                                exoPlayer.seekTo(
-                                    (seekValue * durationMs).toLong()
-                                )
-                            }
-                            isSeeking = false
-                        },
-                        enabled = videoUri != null && durationMs > 0L
-                    )
-
-                    Text(
-                        "CLIPS",
-                        color = Color.LightGray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    if (clips.isEmpty()) {
+        }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
