@@ -1082,6 +1082,16 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = Color(0xFF1B1C24),
+                border = BorderStroke(1.dp, Color(0xFF34313F))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
@@ -1127,7 +1137,9 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                         )
                     ) {
                         Row(
-                            modifier = Modifier.padding(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
@@ -1172,6 +1184,148 @@ verticalArrangement = Arrangement.spacedBy(16.dp)
                             }
                         }
                     }
+
+                    Button(
+                        onClick = {
+                            videoPicker.launch(arrayOf("video/*"))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (videoUri == null) {
+                                "Choose Video"
+                            } else {
+                                "Change Video"
+                            },
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { saveProject() },
+                            enabled = videoUri != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Save Project")
+                        }
+
+                        OutlinedButton(
+                            onClick = { loadProject() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(46.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Load Project")
+                        }
+                    }
+
+                    if (projectStatus.isNotEmpty()) {
+                        Text(
+                            text = projectStatus,
+                            color = if (
+                                projectStatus.contains(
+                                    "failed",
+                                    ignoreCase = true
+                                )
+                            ) {
+                                Color(0xFFFF8A80)
+                            } else {
+                                ClipkaAccent
+                            },
+                            fontSize = 12.sp
+                        )
+                    }
+
+                    Divider(color = Color(0xFF34313F))
+
+                    Text(
+                        text = "PLAYBACK",
+                        color = Color.LightGray,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                if (exoPlayer.isPlaying) {
+                                    exoPlayer.pause()
+                                } else if (videoUri != null) {
+                                    val activeClip = clips.firstOrNull {
+                                        it.id == previewingClipId
+                                    }
+
+                                    if (
+                                        activeClip != null &&
+                                        exoPlayer.currentPosition >= activeClip.endMs
+                                    ) {
+                                        exoPlayer.seekTo(activeClip.startMs)
+                                    }
+
+                                    exoPlayer.play()
+                                }
+                            },
+                            enabled = videoUri != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) {
+                                    Icons.Default.Pause
+                                } else {
+                                    Icons.Default.PlayArrow
+                                },
+                                contentDescription = null
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (isPlaying) "Pause" else "Play")
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                previewingClipId = null
+                                exoPlayer.seekTo(0L)
+                                exoPlayer.pause()
+                            },
+                            enabled = videoUri != null,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("Restart")
+                        }
+                    }
+                }
+            }
+
 
                     Button(
                         onClick = {
