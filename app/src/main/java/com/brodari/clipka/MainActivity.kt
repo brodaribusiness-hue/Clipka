@@ -934,19 +934,23 @@ private fun ClipkaScreen() {
 
                             OutlinedButton(
                                 onClick = {
-                                    val selected = clips.firstOrNull {
-                                        it.id == selectedClipId
-                                    }
+    val selectedId = selectedClipId
 
-                                    if (selected != null) {
-                                        applyClipChange(
-                                            selected.copy(aspectRatio = ratio)
-                                        )
-                                    } else {
-                                        clipError =
-                                            "Select a clip before changing its ratio."
-                                    }
-                                },
+    if (selectedId != null) {
+        val updatedClips = clips.map { clip ->
+            if (clip.id == selectedId) {
+                clip.copy(aspectRatio = ratio)
+            } else {
+                clip
+            }
+        }
+
+        applyClipChange(updatedClips)
+    } else {
+        clipError =
+            "Select a clip before changing its ratio."
+    }
+},
                                 enabled = selectedClipId != null,
                                 border = BorderStroke(
                                     1.dp,
