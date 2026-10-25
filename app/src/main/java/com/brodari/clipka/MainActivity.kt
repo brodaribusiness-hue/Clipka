@@ -9,22 +9,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Redo
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -37,11 +35,12 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import java.net.URLDecoder
 
-private val AppBackground = Color(0xFF101114)
-private val PanelColor = Color(0xFF1C1E23)
-private val AccentColor = Color(0xFFB9F36B)
+private val AppBg = Color(0xFF101114)
+private val Panel = Color(0xFF1C1E23)
+private val Accent = Color(0xFFB9F36B)
 private val MainText = Color(0xFFF5F5F5)
-private val MutedText = Color(0xFF9A9DA5)
+private val Muted = Color(0xFF9A9DA5)
+private val Selected = Color(0xFF303B25)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,9 +49,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
-                    background = AppBackground,
-                    surface = PanelColor,
-                    primary = AccentColor,
+                    background = AppBg,
+                    surface = Panel,
+                    primary = Accent,
                     onPrimary = Color(0xFF171914),
                     onBackground = MainText,
                     onSurface = MainText
@@ -64,7 +63,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class AppScreen {
+private enum class Screen {
     HOME, PROJECTS, EDITOR
 }
 
@@ -72,10 +71,10 @@ private enum class AppScreen {
 private fun ClipkaApp() {
     val context = LocalContext.current
 
-    var screen by remember { mutableStateOf(AppScreen.HOME) }
+    var screen by remember { mutableStateOf(Screen.HOME) }
     var videoUri by remember { mutableStateOf<Uri?>(null) }
     var fileName by remember { mutableStateOf("Untitled video") }
-    var isPlaying by remember { mutableStateOf(false) }
+    var playing by remember { mutableStateOf(false) }
 
     val player = remember {
         ExoPlayer.Builder(context).build()
@@ -83,10 +82,11 @@ private fun ClipkaApp() {
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(playing: Boolean) {
-                isPlaying = playing
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playing = isPlaying
             }
         }
+
         player.addListener(listener)
 
         onDispose {
@@ -95,11 +95,21 @@ private fun ClipkaApp() {
         }
     }
 
-    val videoPicker = rememberLauncherForActivityResult(
+    val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
             videoUri = uri
+
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {
+                // Some providers do not support persistable permissions.
+            }
+
             fileName = uri.lastPathSegment
                 ?.substringAfterLast('/')
                 ?.substringAfterLast(':')
@@ -116,68 +126,68 @@ private fun ClipkaApp() {
             player.setMediaItem(MediaItem.fromUri(uri))
             player.prepare()
             player.playWhenReady = false
-            screen = AppScreen.EDITOR
+            screen = Screen.EDITOR
         }
     }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = AppBackground
+        color = AppBg
     ) {
         when (screen) {
-            AppScreen.HOME -> HomeScreen(
+            Screen.HOME -> HomeScreen(
                 onImport = {
-                    videoPicker.launch(arrayOf("video/*"))
+                    picker.launch(arrayOf("video/*"))
                 },
                 onProjects = {
-                    screen = AppScreen.PROJECTS
+                    screen = Screen.PROJECTS
                 }
             )
 
-            AppScreen.PROJECTS -> ProjectsScreen(
-                onBack = { screen = AppScreen.HOME },
+            Screen.PROJECTS -> ProjectsScreen(
+                onBack = {
+                    screen = Screen.HOME
+                },
                 onImport = {
-                    videoPicker.launch(arrayOf("video/*"))
+                    picker.launch(arrayOf("video/*"))
                 }
             )
 
-            AppScreen.EDITOR -> EditorScreen(
+            Screen.EDITOR -> EditorScreen(
                 fileName = fileName,
-                player = player,
                 videoUri = videoUri,
-                isPlaying = isPlaying,
+                player = player,
+                playing = playing,
                 onClose = {
                     player.pause()
-                    screen = AppScreen.HOME
+                    screen = Screen.HOME
                 },
                 onPlayPause = {
-                    if (player.isPlaying) player.pause()
-                    else player.play()
+                    if (player.isPlaying) {
+                        player.pause()
+                    } else {
+                        player.play()
+                    }
                 },
                 onUndo = {
-                    Toast.makeText(
-                        context,
-                        "Undo will be connected in the editing phase",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showMessage(context, "Undo integration is not connected yet")
                 },
                 onRedo = {
-                    Toast.makeText(
-                        context,
-                        "Redo will be connected in the editing phase",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showMessage(context, "Redo integration is not connected yet")
                 },
                 onExport = {
-                    Toast.makeText(
-                        context,
-                        "Export will be connected in the next phase",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    showMessage(context, "Export integration is not connected yet")
                 }
             )
         }
     }
+}
+
+private fun showMessage(
+    context: android.content.Context,
+    message: String
+) {
+    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 }
 
 @Composable
@@ -189,50 +199,54 @@ private fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = "CLIPKA",
+            color = Accent,
             fontSize = 34.sp,
             fontWeight = FontWeight.Black,
-            letterSpacing = 5.sp,
-            color = AccentColor
+            letterSpacing = 5.sp
         )
 
         Spacer(Modifier.height(8.dp))
 
         Text(
             text = "Your video. Your story.",
-            color = MutedText,
+            color = Muted,
             fontSize = 14.sp
         )
 
-        Spacer(Modifier.height(48.dp))
+        Spacer(Modifier.height(44.dp))
 
         Button(
             onClick = onImport,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp),
+                .height(58.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = AccentColor,
+                containerColor = Accent,
                 contentColor = Color(0xFF171914)
             )
         ) {
             Icon(Icons.Default.Movie, contentDescription = null)
             Spacer(Modifier.width(10.dp))
-            Text("Import Video", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(
+                "Import Video",
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
 
         OutlinedButton(
             onClick = onProjects,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp),
+                .height(58.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MainText
@@ -260,428 +274,46 @@ private fun ProjectsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.Default.Close, contentDescription = "Back")
-            }
-
-            Text(
-                "Projects",
-                modifier = Modifier.weight(1f),
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.FolderOpen,
-                    contentDescription = null,
-                    tint = MutedText,
-                    modifier = Modifier.size(54.dp)
-                )
-                Spacer(Modifier.height(14.dp))
-                Text("Your projects will appear here", color = MainText)
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    "Saved-project loading will be connected next.",
-                    color = MutedText,
-                    fontSize = 12.sp
-                )
-            }
-        }
-
-        Button(
-            onClick = onImport,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = AccentColor,
-                contentColor = Color(0xFF171914)
-            )
-        ) {
-            Text("Import Video")
-        }
-    }
-}
-
-@Composable
-private fun EditorScreen(
-    fileName: String,
-    player: ExoPlayer,
-    videoUri: Uri?,
-    isPlaying: Boolean,
-    onClose: () -> Unit,
-    onPlayPause: () -> Unit,
-    onUndo: () -> Unit,
-    onRedo: () -> Unit,
-    onExport: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppBackground)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        // Top bar: close | file name | export
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onClose,
-                modifier = Modifier.size(42.dp)
-            ) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "Close editor",
+                    contentDescription = "Back",
                     tint = MainText
                 )
             }
 
             Text(
-                text = fileName,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 6.dp),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
+                text = "Projects",
+                fontSize = 23.sp,
+                fontWeight = FontWeight.Bold,
                 color = MainText
             )
-
-            Button(
-                onClick = onExport,
-                contentPadding = PaddingValues(horizontal = 14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = AccentColor,
-                    contentColor = Color(0xFF171914)
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Export", fontWeight = FontWeight.Bold)
-            }
         }
 
-        Spacer(Modifier.height(8.dp))
-
-        // Main video preview occupies most of the screen.
         Box(
             modifier = Modifier
-                .fillMaxWidth()
                 .weight(1f)
-                .background(Color.Black, RoundedCornerShape(14.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            if (videoUri != null) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { viewContext ->
-                        PlayerView(viewContext).apply {
-                            this.player = player
-                            useController = false
-                            resizeMode =
-                                AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        }
-                    },
-                    update = { view ->
-                        view.player = player
-                    }
-                )
-            } else {
-                Icon(
-                    Icons.Default.Movie,
-                    contentDescription = null,
-                    tint = MutedText,
-                    modifier = Modifier.size(56.dp)
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // Playback controls, followed immediately by undo and redo.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(62.dp)
-                .background(PanelColor, RoundedCornerShape(16.dp))
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            FilledIconButton(
-                onClick = onPlayPause,
-                modifier = Modifier.size(48.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = AccentColor,
-                    contentColor = Color(0xFF171914)
-                )
-            ) {
-                Icon(
-                    if (isPlaying) Icons.Default.Pause
-                    else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
-                    modifier = Modifier.size(29.dp)
-                )
-            }
-
-            Spacer(Modifier.width(18.dp))
-
-            IconButton(onClick = onUndo) {
-                Icon(
-                    Icons.Default.Undo,
-                    contentDescription = "Undo",
-                    tint = MainText
-                )
-            }
-
-            IconButton(onClick = onRedo) {
-                Icon(
-                    Icons.Default.Redo,
-                    contentDescription = "Redo",
-                    tint = MainText
-                )
-            }
-        }
-    }
-}
-
-package com.brodari.clipka
-
-import android.net.Uri
-import android.os.Bundle
-import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.clickable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
-
-private val AppBg = Color(0xFF101114)
-private val Panel = Color(0xFF1C1E23)
-private val Accent = Color(0xFFB9F36B)
-private val MainText = Color(0xFFF5F5F5)
-private val Muted = Color(0xFF9A9DA5)
-private val Selected = Color(0xFF303B25)
-
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
-                    background = AppBg,
-                    surface = Panel,
-                    primary = Accent,
-                    onPrimary = Color(0xFF171914),
-                    onBackground = MainText,
-                    onSurface = MainText
-                )
-            ) {
-                ClipkaApp()
-            }
-        }
-    }
-}
-
-private enum class Screen { HOME, PROJECTS, EDITOR }
-
-@Composable
-private fun ClipkaApp() {
-    val context = LocalContext.current
-    var screen by remember { mutableStateOf(Screen.HOME) }
-    var videoUri by remember { mutableStateOf<Uri?>(null) }
-    var fileName by remember { mutableStateOf("Untitled video") }
-    var playing by remember { mutableStateOf(false) }
-
-    val player = remember { ExoPlayer.Builder(context).build() }
-
-    DisposableEffect(player) {
-        val listener = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                playing = isPlaying
-            }
-        }
-        player.addListener(listener)
-        onDispose {
-            player.removeListener(listener)
-            player.release()
-        }
-    }
-
-    val picker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            videoUri = uri
-            fileName = uri.lastPathSegment
-                ?.substringAfterLast('/')
-                ?.substringAfterLast(':')
-                ?: "Imported video"
-            player.setMediaItem(MediaItem.fromUri(uri))
-            player.prepare()
-            player.playWhenReady = false
-            screen = Screen.EDITOR
-        }
-    }
-
-    Surface(Modifier.fillMaxSize(), color = AppBg) {
-        when (screen) {
-            Screen.HOME -> HomeScreen(
-                onImport = { picker.launch(arrayOf("video/*")) },
-                onProjects = { screen = Screen.PROJECTS }
-            )
-
-            Screen.PROJECTS -> ProjectsScreen(
-                onBack = { screen = Screen.HOME },
-                onImport = { picker.launch(arrayOf("video/*")) }
-            )
-
-            Screen.EDITOR -> EditorScreen(
-                fileName = fileName,
-                videoUri = videoUri,
-                player = player,
-                playing = playing,
-                onClose = {
-                    player.pause()
-                    screen = Screen.HOME
-                },
-                onPlayPause = {
-                    if (player.isPlaying) player.pause() else player.play()
-                },
-                onUndo = {
-                    toast(context, "Undo integration pending")
-                },
-                onRedo = {
-                    toast(context, "Redo integration pending")
-                },
-                onExport = {
-                    toast(context, "Export integration pending")
-                }
-            )
-        }
-    }
-}
-
-private fun toast(context: android.content.Context, message: String) {
-    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-}
-
-@Composable
-private fun HomeScreen(
-    onImport: () -> Unit,
-    onProjects: () -> Unit
-) {
-    Column(
-        Modifier.fillMaxSize().padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            "CLIPKA",
-            color = Accent,
-            fontSize = 34.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 5.sp
-        )
-        Spacer(Modifier.height(8.dp))
-        Text("Your video. Your story.", color = Muted)
-        Spacer(Modifier.height(44.dp))
-
-        Button(
-            onClick = onImport,
-            modifier = Modifier.fillMaxWidth().height(58.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Accent,
-                contentColor = Color(0xFF171914)
-            )
-        ) {
-            Icon(Icons.Default.Movie, null)
-            Spacer(Modifier.width(10.dp))
-            Text("Import Video", fontSize = 17.sp, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(Modifier.height(14.dp))
-
-        OutlinedButton(
-            onClick = onProjects,
-            modifier = Modifier.fillMaxWidth().height(58.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Icon(Icons.Default.FolderOpen, null)
-            Spacer(Modifier.width(10.dp))
-            Text("Projects", fontSize = 17.sp)
-        }
-    }
-}
-
-@Composable
-private fun ProjectsScreen(
-    onBack: () -> Unit,
-    onImport: () -> Unit
-) {
-    Column(Modifier.fillMaxSize().padding(20.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Default.Close, "Back")
-            }
-            Text(
-                "Projects",
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Box(
-            Modifier.weight(1f).fillMaxWidth(),
+                .fillMaxWidth(),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(
                     Icons.Default.FolderOpen,
-                    null,
+                    contentDescription = null,
                     tint = Muted,
                     modifier = Modifier.size(52.dp)
                 )
+
                 Spacer(Modifier.height(12.dp))
-                Text("Your saved projects", color = MainText)
+
                 Text(
-                    "Saved-project loading will be connected next.",
+                    "Your saved projects",
+                    color = MainText
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    "Project loading is not connected yet.",
                     color = Muted,
                     fontSize = 12.sp
                 )
@@ -690,10 +322,15 @@ private fun ProjectsScreen(
 
         Button(
             onClick = onImport,
-            modifier = Modifier.fillMaxWidth().height(52.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Accent)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Accent,
+                contentColor = Color(0xFF171914)
+            )
         ) {
-            Text("Import Video", color = Color(0xFF171914))
+            Text("Import Video")
         }
     }
 }
@@ -720,26 +357,34 @@ private fun EditorScreen(
     var autoFace by remember { mutableStateOf(false) }
 
     Column(
-        Modifier.fillMaxSize().background(AppBg).padding(
-            horizontal = 10.dp,
-            vertical = 5.dp
-        )
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppBg)
+            .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
-        // TOP BAR: Close | file name | Export
+        // Top bar: Close | File name | Export
         Row(
-            Modifier.fillMaxWidth().height(44.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
                 onClick = onClose,
                 modifier = Modifier.size(38.dp)
             ) {
-                Icon(Icons.Default.Close, "Close editor", tint = MainText)
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close editor",
+                    tint = MainText
+                )
             }
 
             Text(
-                fileName,
-                Modifier.weight(1f).padding(horizontal = 5.dp),
+                text = fileName,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 5.dp),
                 color = MainText,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
@@ -749,21 +394,34 @@ private fun EditorScreen(
 
             Button(
                 onClick = onExport,
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Accent)
+                contentPadding = PaddingValues(
+                    horizontal = 12.dp,
+                    vertical = 5.dp
+                ),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Accent,
+                    contentColor = Color(0xFF171914)
+                )
             ) {
-                Text("Export", color = Color(0xFF171914), fontWeight = FontWeight.Bold)
+                Text(
+                    "Export",
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
 
         Spacer(Modifier.height(5.dp))
 
-        // VIDEO PREVIEW
+        // Main video preview.
         Box(
-            Modifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .background(Color.Black, RoundedCornerShape(12.dp)),
+                .background(
+                    Color.Black,
+                    RoundedCornerShape(12.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
             if (videoUri != null) {
@@ -790,27 +448,39 @@ private fun EditorScreen(
                     }
                 )
             } else {
-                Icon(Icons.Default.Movie, null, tint = Muted, modifier = Modifier.size(50.dp))
+                Icon(
+                    Icons.Default.Movie,
+                    contentDescription = null,
+                    tint = Muted,
+                    modifier = Modifier.size(50.dp)
+                )
             }
         }
 
         Spacer(Modifier.height(7.dp))
 
-        // PLAYBACK + FULL SCREEN / STRETCH + UNDO / REDO
+        // Fit/Stretch, Play/Pause, Undo and Redo.
         Row(
-            Modifier.fillMaxWidth().height(48.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             OutlinedButton(
-                onClick = { stretch = !stretch },
-                modifier = Modifier.weight(1.35f).fillMaxHeight(),
+                onClick = {
+                    stretch = !stretch
+                },
+                modifier = Modifier
+                    .weight(1.35f)
+                    .fillMaxHeight(),
                 contentPadding = PaddingValues(horizontal = 4.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
                 Icon(
-                    if (stretch) Icons.Default.FullscreenExit else Icons.Default.Fullscreen,
-                    null,
+                    if (stretch) Icons.Default.FullscreenExit
+                    else Icons.Default.Fullscreen,
+                    contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(Modifier.width(3.dp))
@@ -830,25 +500,43 @@ private fun EditorScreen(
                 )
             ) {
                 Icon(
-                    if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    if (playing) Icons.Default.Pause
+                    else Icons.Default.PlayArrow,
                     contentDescription = "Play/Pause",
                     modifier = Modifier.size(26.dp)
                 )
             }
 
-            IconButton(onClick = onUndo, modifier = Modifier.size(38.dp)) {
-                Icon(Icons.Default.Undo, "Undo", tint = MainText)
+            IconButton(
+                onClick = onUndo,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Icon(
+                    Icons.Default.Undo,
+                    contentDescription = "Undo",
+                    tint = MainText
+                )
             }
-            IconButton(onClick = onRedo, modifier = Modifier.size(38.dp)) {
-                Icon(Icons.Default.Redo, "Redo", tint = MainText)
+
+            IconButton(
+                onClick = onRedo,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Icon(
+                    Icons.Default.Redo,
+                    contentDescription = "Redo",
+                    tint = MainText
+                )
             }
         }
 
         Spacer(Modifier.height(6.dp))
 
-        // START + END TIME IN ONE ROW
+        // Start and End time on the same row.
         Row(
-            Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -858,6 +546,7 @@ private fun EditorScreen(
                 onValueChange = { startTime = it },
                 modifier = Modifier.weight(1f)
             )
+
             TimeField(
                 label = "END",
                 value = endTime,
@@ -868,14 +557,18 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(5.dp))
 
-        // THUMBNAIL TIMELINE STRIP
+        // Timeline strip. These are currently visual placeholders.
         Column(
-            Modifier.fillMaxWidth()
-                .background(Panel, RoundedCornerShape(10.dp))
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Panel,
+                    RoundedCornerShape(10.dp)
+                )
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Row(
-                Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -884,37 +577,39 @@ private fun EditorScreen(
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
+
                 Spacer(Modifier.weight(1f))
-                Text("$startTime  —  $endTime", color = Accent, fontSize = 10.sp)
+
+                Text(
+                    "$startTime  —  $endTime",
+                    color = Accent,
+                    fontSize = 10.sp
+                )
             }
 
             Spacer(Modifier.height(5.dp))
 
             Row(
-                Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 repeat(10) { index ->
                     Box(
-                        Modifier
+                        modifier = Modifier
                             .width(48.dp)
                             .height(40.dp)
                             .background(
-                                if (index == 3) Selected else Color(0xFF303238),
+                                if (index == 3) Selected
+                                else Color(0xFF303238),
                                 RoundedCornerShape(5.dp)
-                            )
-                            .then(
-                                if (index == 3) Modifier.background(
-                                    Selected,
-                                    RoundedCornerShape(5.dp)
-                                ) else Modifier
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.Movie,
-                            null,
+                            contentDescription = "Timeline segment ${index + 1}",
                             tint = if (index == 3) Accent else Muted,
                             modifier = Modifier.size(18.dp)
                         )
@@ -925,9 +620,11 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(7.dp))
 
-        // BOTTOM TOOL ROW
+        // Bottom tool row; no vertical scrolling.
         Row(
-            Modifier.fillMaxWidth().height(70.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -943,7 +640,10 @@ private fun EditorScreen(
                 icon = Icons.Default.ContentCut,
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    toast(context, "Trim UI ready; video trimming integration pending")
+                    showMessage(
+                        context,
+                        "Trim action is not connected yet"
+                    )
                 }
             )
 
@@ -952,7 +652,10 @@ private fun EditorScreen(
                 icon = Icons.Default.AutoAwesome,
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    toast(context, "Viral clip detection engine pending")
+                    showMessage(
+                        context,
+                        "Automatic clip detection is not connected yet"
+                    )
                 }
             )
 
@@ -963,9 +666,13 @@ private fun EditorScreen(
                 active = autoFace,
                 onClick = {
                     autoFace = !autoFace
-                    toast(
+                    showMessage(
                         context,
-                        if (autoFace) "Face detection selected" else "Face detection paused"
+                        if (autoFace) {
+                            "Face detection UI enabled; tracking is not connected"
+                        } else {
+                            "Face detection UI disabled"
+                        }
                     )
                 }
             )
@@ -982,11 +689,19 @@ private fun EditorScreen(
     if (showEdit) {
         OptionsDialog(
             title = "Edit Video",
-            options = listOf("Crop", "Resize", "Zoom", "Adjust"),
+            options = listOf(
+                "Crop",
+                "Resize",
+                "Zoom",
+                "Adjust"
+            ),
             onDismiss = { showEdit = false },
             onSelect = { option ->
                 showEdit = false
-                toast(context, "$option selected — editing action integration pending")
+                showMessage(
+                    context,
+                    "$option selected; editing action is not connected yet"
+                )
             }
         )
     }
@@ -1009,7 +724,10 @@ private fun EditorScreen(
             onDismiss = { showPreview = false },
             onSelect = { option ->
                 showPreview = false
-                toast(context, "$option selected — feature integration pending")
+                showMessage(
+                    context,
+                    "$option selected; layout integration is not connected yet"
+                )
             }
         )
     }
@@ -1025,12 +743,18 @@ private fun TimeField(
     OutlinedTextField(
         value = value,
         onValueChange = { input ->
-            onValueChange(input.filter { it.isDigit() || it == ':' }.take(8))
+            onValueChange(
+                input.filter {
+                    it.isDigit() || it == ':'
+                }.take(8)
+            )
         },
         modifier = modifier.height(52.dp),
-        label = { Text(label, fontSize = 9.sp) },
+        label = {
+            Text(label, fontSize = 9.sp)
+        },
         singleLine = true,
-        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp),
+        textStyle = TextStyle(fontSize = 13.sp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = Accent,
             unfocusedBorderColor = Color(0xFF44464D),
@@ -1068,9 +792,11 @@ private fun ToolButton(
             tint = if (active) Accent else MainText,
             modifier = Modifier.size(22.dp)
         )
+
         Spacer(Modifier.height(4.dp))
+
         Text(
-            label,
+            text = label,
             color = if (active) Accent else MainText,
             fontSize = 9.sp,
             maxLines = 1,
@@ -1090,20 +816,28 @@ private fun OptionsDialog(
         onDismissRequest = onDismiss,
         containerColor = Panel,
         title = {
-            Text(title, color = MainText, fontWeight = FontWeight.Bold)
+            Text(
+                title,
+                color = MainText,
+                fontWeight = FontWeight.Bold
+            )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
                 options.forEach { option ->
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(option) },
+                            .clickable {
+                                onSelect(option)
+                            },
                         color = Color(0xFF282A30),
                         shape = RoundedCornerShape(9.dp)
                     ) {
                         Text(
-                            option,
+                            text = option,
                             modifier = Modifier.padding(
                                 horizontal = 14.dp,
                                 vertical = 12.dp
