@@ -1,4 +1,3 @@
-
 package com.brodari.clipka
 
 import android.net.Uri
@@ -21,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +67,25 @@ private enum class Screen {
     HOME, PROJECTS, EDITOR
 }
 
+private enum class ToolMode {
+    MAIN, EDIT, PREVIEW
+}
+
+private data class SplitTemplate(
+    val id: Int,
+    val title: String,
+    val description: String
+)
+
+private val splitTemplates = listOf(
+    SplitTemplate(1, "Template 1", "Vertical split: speaker 1 top, speaker 2 bottom"),
+    SplitTemplate(2, "Template 2", "Two speakers side by side"),
+    SplitTemplate(3, "Template 3", "Diagonal split for two speakers"),
+    SplitTemplate(4, "Template 4", "Picture-in-picture speaker layout"),
+    SplitTemplate(5, "Template 5", "Main speaker with second speaker below"),
+    SplitTemplate(6, "Template 6", "Main view with two speaker inset frames")
+)
+
 @Composable
 private fun ClipkaApp() {
     val context = LocalContext.current
@@ -107,7 +126,7 @@ private fun ClipkaApp() {
                     android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (_: Exception) {
-                // Some providers do not support persistable permissions.
+                // Some providers do not support persistent permissions.
             }
 
             fileName = uri.lastPathSegment
@@ -163,11 +182,7 @@ private fun ClipkaApp() {
                     screen = Screen.HOME
                 },
                 onPlayPause = {
-                    if (player.isPlaying) {
-                        player.pause()
-                    } else {
-                        player.play()
-                    }
+                    if (player.isPlaying) player.pause() else player.play()
                 },
                 onUndo = {
                     showMessage(context, "Undo integration is not connected yet")
@@ -270,7 +285,9 @@ private fun ProjectsScreen(
             .padding(20.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
@@ -305,10 +322,7 @@ private fun ProjectsScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                Text(
-                    "Your saved projects",
-                    color = MainText
-                )
+                Text("Your saved projects", color = MainText)
 
                 Spacer(Modifier.height(6.dp))
 
@@ -333,9 +347,7 @@ private fun ProjectsScreen(
             Text("Import Video")
         }
     }
-}
-
-@Composable
+    @Composable
 private fun EditorScreen(
     fileName: String,
     videoUri: Uri?,
@@ -352,9 +364,9 @@ private fun EditorScreen(
     var stretch by remember { mutableStateOf(false) }
     var startTime by remember { mutableStateOf("00:00") }
     var endTime by remember { mutableStateOf("00:30") }
-    var showEdit by remember { mutableStateOf(false) }
-    var showPreview by remember { mutableStateOf(false) }
+    var toolMode by remember { mutableStateOf(ToolMode.MAIN) }
     var autoFace by remember { mutableStateOf(false) }
+    var selectedTemplate by remember { mutableIntStateOf(1) }
 
     Column(
         modifier = Modifier
@@ -362,7 +374,7 @@ private fun EditorScreen(
             .background(AppBg)
             .padding(horizontal = 10.dp, vertical = 5.dp)
     ) {
-        // Top bar: Close | File name | Export
+        // Top bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -404,24 +416,18 @@ private fun EditorScreen(
                     contentColor = Color(0xFF171914)
                 )
             ) {
-                Text(
-                    "Export",
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Export", fontWeight = FontWeight.Bold)
             }
         }
 
         Spacer(Modifier.height(5.dp))
 
-        // Main video preview.
+        // Main video preview stays in place in every tool mode.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .background(
-                    Color.Black,
-                    RoundedCornerShape(12.dp)
-                ),
+                .background(Color.Black, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             if (videoUri != null) {
@@ -459,7 +465,7 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(7.dp))
 
-        // Fit/Stretch, Play/Pause, Undo and Redo.
+        // Playback controls
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -468,9 +474,7 @@ private fun EditorScreen(
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             OutlinedButton(
-                onClick = {
-                    stretch = !stretch
-                },
+                onClick = { stretch = !stretch },
                 modifier = Modifier
                     .weight(1.35f)
                     .fillMaxHeight(),
@@ -507,10 +511,7 @@ private fun EditorScreen(
                 )
             }
 
-            IconButton(
-                onClick = onUndo,
-                modifier = Modifier.size(38.dp)
-            ) {
+            IconButton(onClick = onUndo, modifier = Modifier.size(38.dp)) {
                 Icon(
                     Icons.Default.Undo,
                     contentDescription = "Undo",
@@ -518,10 +519,7 @@ private fun EditorScreen(
                 )
             }
 
-            IconButton(
-                onClick = onRedo,
-                modifier = Modifier.size(38.dp)
-            ) {
+            IconButton(onClick = onRedo, modifier = Modifier.size(38.dp)) {
                 Icon(
                     Icons.Default.Redo,
                     contentDescription = "Redo",
@@ -532,7 +530,7 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(6.dp))
 
-        // Start and End time on the same row.
+        // Start and end time fields
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -557,14 +555,11 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(5.dp))
 
-        // Timeline strip. These are currently visual placeholders.
+        // Timeline
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Panel,
-                    RoundedCornerShape(10.dp)
-                )
+                .background(Panel, RoundedCornerShape(10.dp))
                 .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Row(
@@ -620,116 +615,177 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(7.dp))
 
-        // Bottom tool row; no vertical scrolling.
+        // Bottom tools: only this row changes.
+        // Horizontal scrolling is allowed; vertical scrolling is not used.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(70.dp),
+                .height(70.dp)
+                .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ToolButton(
-                label = "Edit",
-                icon = Icons.Default.Tune,
-                modifier = Modifier.weight(1f),
-                onClick = { showEdit = true }
-            )
+            when (toolMode) {
+                ToolMode.MAIN -> {
+                    ToolButton(
+                        label = "Edit",
+                        icon = Icons.Default.Tune,
+                        onClick = { toolMode = ToolMode.EDIT }
+                    )
 
-            ToolButton(
-                label = "Trim",
-                icon = Icons.Default.ContentCut,
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    showMessage(
-                        context,
-                        "Trim action is not connected yet"
+                    ToolButton(
+                        label = "Trim",
+                        icon = Icons.Default.ContentCut,
+                        onClick = {
+                            showMessage(context, "Trim action is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Auto Clip",
+                        icon = Icons.Default.AutoAwesome,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Automatic clip detection is not connected yet"
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = if (autoFace) "Face ON" else "Face Detect",
+                        icon = Icons.Default.Face,
+                        active = autoFace,
+                        onClick = {
+                            autoFace = !autoFace
+                            showMessage(
+                                context,
+                                if (autoFace) {
+                                    "Face detection UI enabled; tracking is not connected"
+                                } else {
+                                    "Face detection UI disabled"
+                                }
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Preview",
+                        icon = Icons.Default.ViewCarousel,
+                        onClick = { toolMode = ToolMode.PREVIEW }
                     )
                 }
-            )
 
-            ToolButton(
-                label = "Auto Clip",
-                icon = Icons.Default.AutoAwesome,
-                modifier = Modifier.weight(1f),
-                onClick = {
-                    showMessage(
-                        context,
-                        "Automatic clip detection is not connected yet"
+                ToolMode.EDIT -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = { toolMode = ToolMode.MAIN }
                     )
-                }
-            )
 
-            ToolButton(
-                label = if (autoFace) "Face ON" else "Face Detect",
-                icon = Icons.Default.Face,
-                modifier = Modifier.weight(1.15f),
-                active = autoFace,
-                onClick = {
-                    autoFace = !autoFace
-                    showMessage(
-                        context,
-                        if (autoFace) {
-                            "Face detection UI enabled; tracking is not connected"
-                        } else {
-                            "Face detection UI disabled"
+                    ToolButton(
+                        label = "Crop",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            showMessage(context, "Crop editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Resize",
+                        icon = Icons.Default.AspectRatio,
+                        onClick = {
+                            showMessage(context, "Resize editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Zoom",
+                        icon = Icons.Default.ZoomIn,
+                        onClick = {
+                            showMessage(context, "Zoom editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Adjust",
+                        icon = Icons.Default.Tune,
+                        onClick = {
+                            showMessage(context, "Adjust controls are not connected yet")
                         }
                     )
                 }
-            )
 
-            ToolButton(
-                label = "Preview",
-                icon = Icons.Default.ViewCarousel,
-                modifier = Modifier.weight(1f),
-                onClick = { showPreview = true }
-            )
+                ToolMode.PREVIEW -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = { toolMode = ToolMode.MAIN }
+                    )
+
+                    splitTemplates.forEach { template ->
+                        ToolButton(
+                            label = template.title,
+                            icon = Icons.Default.ViewQuilt,
+                            active = selectedTemplate == template.id,
+                            onClick = {
+                                selectedTemplate = template.id
+                                showMessage(
+                                    context,
+                                    "${template.title}: ${template.description}. " +
+                                        "Rendering integration is not connected yet."
+                                )
+                            }
+                        )
+                    }
+
+                    ToolButton(
+                        label = "Ratio",
+                        icon = Icons.Default.CropSquare,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Aspect ratio options: 9:16, 16:9, 1:1 and 4:5. " +
+                                    "Ratio editing is not connected yet."
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Manual Frame",
+                        icon = Icons.Default.OpenWith,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Manual framing is not connected to this editor yet"
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Auto Frame",
+                        icon = Icons.Default.Face,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Automatic speaker framing is not connected yet"
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Add Clip",
+                        icon = Icons.Default.AddCircleOutline,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Add Clip editing is not connected yet"
+                            )
+                        }
+                    )
+                }
+            }
         }
-    }
-
-    if (showEdit) {
-        OptionsDialog(
-            title = "Edit Video",
-            options = listOf(
-                "Crop",
-                "Resize",
-                "Zoom",
-                "Adjust"
-            ),
-            onDismiss = { showEdit = false },
-            onSelect = { option ->
-                showEdit = false
-                showMessage(
-                    context,
-                    "$option selected; editing action is not connected yet"
-                )
-            }
-        )
-    }
-
-    if (showPreview) {
-        OptionsDialog(
-            title = "Preview & Layout",
-            options = listOf(
-                "Split Screen — Template 1",
-                "Split Screen — Template 2",
-                "Split Screen — Template 3",
-                "Split Screen — Template 4",
-                "Split Screen — Template 5",
-                "Split Screen — Template 6",
-                "Aspect Ratio",
-                "Manual Framing",
-                "Automatic Framing",
-                "Add Multiple Clips"
-            ),
-            onDismiss = { showPreview = false },
-            onSelect = { option ->
-                showPreview = false
-                showMessage(
-                    context,
-                    "$option selected; layout integration is not connected yet"
-                )
-            }
-        )
     }
 }
 
@@ -769,25 +825,25 @@ private fun TimeField(
 @Composable
 private fun ToolButton(
     label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier,
+    icon: ImageVector,
     active: Boolean = false,
     onClick: () -> Unit
 ) {
     Column(
-        modifier = modifier
+        modifier = Modifier
+            .width(70.dp)
             .fillMaxHeight()
             .background(
                 if (active) Selected else Panel,
                 RoundedCornerShape(10.dp)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 2.dp, vertical = 7.dp),
+            .padding(horizontal = 3.dp, vertical = 7.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Icon(
-            icon,
+            imageVector = icon,
             contentDescription = label,
             tint = if (active) Accent else MainText,
             modifier = Modifier.size(22.dp)
@@ -804,55 +860,4 @@ private fun ToolButton(
         )
     }
 }
-
-@Composable
-private fun OptionsDialog(
-    title: String,
-    options: List<String>,
-    onDismiss: () -> Unit,
-    onSelect: (String) -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = Panel,
-        title = {
-            Text(
-                title,
-                color = MainText,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(5.dp)
-            ) {
-                options.forEach { option ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onSelect(option)
-                            },
-                        color = Color(0xFF282A30),
-                        shape = RoundedCornerShape(9.dp)
-                    ) {
-                        Text(
-                            text = option,
-                            modifier = Modifier.padding(
-                                horizontal = 14.dp,
-                                vertical = 12.dp
-                            ),
-                            color = MainText,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close", color = Accent)
-            }
-        }
-    )
 }
