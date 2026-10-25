@@ -1,3 +1,4 @@
+
 package com.brodari.clipka
 
 import android.net.Uri
@@ -182,7 +183,11 @@ private fun ClipkaApp() {
                     screen = Screen.HOME
                 },
                 onPlayPause = {
-                    if (player.isPlaying) player.pause() else player.play()
+                    if (player.isPlaying) {
+                        player.pause()
+                    } else {
+                        player.play()
+                    }
                 },
                 onUndo = {
                     showMessage(context, "Undo integration is not connected yet")
@@ -343,7 +348,7 @@ private fun ProjectsScreen(
                 containerColor = Accent,
                 contentColor = Color(0xFF171914)
             )
-                ) {
+        ) {
             Text("Import Video")
         }
     }
@@ -369,6 +374,16 @@ private fun EditorScreen(
     var toolMode by remember { mutableStateOf(ToolMode.MAIN) }
     var autoFace by remember { mutableStateOf(false) }
     var selectedTemplate by remember { mutableIntStateOf(1) }
+
+    var clips by remember {
+        mutableStateOf<List<ClipSegment>>(emptyList())
+    }
+    var selectedClipId by remember {
+        mutableStateOf<String?>(null)
+    }
+    var nextClipNumber by remember {
+        mutableIntStateOf(1)
+    }
 
     Column(
         modifier = Modifier
@@ -489,7 +504,9 @@ private fun EditorScreen(
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
+
                 Spacer(Modifier.width(3.dp))
+
                 Text(
                     if (stretch) "Fit" else "Stretch",
                     fontSize = 11.sp,
@@ -513,7 +530,10 @@ private fun EditorScreen(
                 )
             }
 
-            IconButton(onClick = onUndo, modifier = Modifier.size(38.dp)) {
+            IconButton(
+                onClick = onUndo,
+                modifier = Modifier.size(38.dp)
+            ) {
                 Icon(
                     Icons.Default.Undo,
                     contentDescription = "Undo",
@@ -521,7 +541,10 @@ private fun EditorScreen(
                 )
             }
 
-            IconButton(onClick = onRedo, modifier = Modifier.size(38.dp)) {
+            IconButton(
+                onClick = onRedo,
+                modifier = Modifier.size(38.dp)
+            ) {
                 Icon(
                     Icons.Default.Redo,
                     contentDescription = "Redo",
@@ -557,7 +580,7 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(5.dp))
 
-        // Timeline
+        // Real clip timeline
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -569,7 +592,7 @@ private fun EditorScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "TIMELINE",
+                    "TIMELINE · ${clips.size} CLIPS",
                     color = Muted,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
@@ -578,7 +601,7 @@ private fun EditorScreen(
                 Spacer(Modifier.weight(1f))
 
                 Text(
-                    "$startTime  —  $endTime",
+                    "$startTime — $endTime",
                     color = Accent,
                     fontSize = 10.sp
                 )
@@ -590,26 +613,81 @@ private fun EditorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                repeat(10) { index ->
-                    Box(
+                if (clips.isEmpty()) {
+                    Text(
+                        "No clips yet · Preview → Add Clip",
+                        color = Muted,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(vertical = 10.dp)
+                    )
+                }
+
+                clips.forEach { clip ->
+                    Column(
                         modifier = Modifier
-                            .width(48.dp)
-                            .height(40.dp)
+                            .width(105.dp)
                             .background(
-                                if (index == 3) Selected
-                                else Color(0xFF303238),
-                                RoundedCornerShape(5.dp)
-                            ),
-                        contentAlignment = Alignment.Center
+                                if (clip.id == selectedClipId) {
+                                    Selected
+                                } else {
+                                    Color(0xFF303238)
+                                },
+                                RoundedCornerShape(7.dp)
+                            )
+                            .clickable {
+                                selectedClipId = clip.id
+                                startTime = formatTime(clip.startMs)
+                                endTime = formatTime(clip.endMs)
+                            }
+                            .padding(7.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Movie,
-                            contentDescription = "Timeline segment ${index + 1}",
-                            tint = if (index == 3) Accent else Muted,
-                            modifier = Modifier.size(18.dp)
+                        Text(
+                            clip.name,
+                            color = MainText,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+
+                        Spacer(Modifier.height(3.dp))
+
+                        Text(
+                            "${formatTime(clip.startMs)}–${formatTime(clip.endMs)}",
+                            color = Muted,
+                            fontSize = 9.sp,
+                            maxLines = 1
+                        )
+
+                        Text(
+                            "${clip.durationMs / 1000L}s",
+                            color = Accent,
+                            fontSize = 10.sp
+                        )
+
+                        TextButton(
+                            onClick = {
+                                clips = clips.filterNot {
+                                    it.id == clip.id
+                                }
+
+                                if (selectedClipId == clip.id) {
+                                    selectedClipId = null
+                                    startTime = "00:00"
+                                    endTime = "00:30"
+                                }
+                            },
+                            contentPadding = PaddingValues(0.dp),
+                            modifier = Modifier.height(25.dp)
+                        ) {
+                            Text(
+                                "Delete",
+                                color = Color(0xFFFF8A80),
+                                fontSize = 10.sp
+                            )
+                        }
                     }
                 }
             }
@@ -617,8 +695,7 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(7.dp))
 
-        // Bottom tools: only this row changes.
-        // Horizontal scrolling is allowed; vertical scrolling is not used.
+        // Bottom tools: horizontal scrolling only.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -632,14 +709,80 @@ private fun EditorScreen(
                     ToolButton(
                         label = "Edit",
                         icon = Icons.Default.Tune,
-                        onClick = { toolMode = ToolMode.EDIT }
+                        onClick = {
+                            toolMode = ToolMode.EDIT
+                        }
                     )
 
                     ToolButton(
                         label = "Trim",
                         icon = Icons.Default.ContentCut,
                         onClick = {
-                            showMessage(context, "Trim action is not connected yet")
+                            val startMs = parseTimeToMs(startTime)
+                            val endMs = parseTimeToMs(endTime)
+
+                            val selected = clips.firstOrNull {
+                                it.id == selectedClipId
+                            }
+
+                            when {
+                                selected == null -> {
+                                    showMessage(
+                                        context,
+                                        "Select a clip from the timeline first"
+                                    )
+                                }
+
+                                startMs == null || endMs == null -> {
+                                    showMessage(
+                                        context,
+                                        "Enter valid start and end times"
+                                    )
+                                }
+
+                                endMs <= startMs -> {
+                                    showMessage(
+                                        context,
+                                        "End time must be after start time"
+                                    )
+                                }
+
+                                player.duration > 0L &&
+                                    endMs > player.duration -> {
+                                    showMessage(
+                                        context,
+                                        "End time exceeds video duration"
+                                    )
+                                }
+
+                                else -> {
+                                    val updated = selected.copy(
+                                        startMs = startMs,
+                                        endMs = endMs
+                                    )
+
+                                    when (val result = updated.validate()) {
+                                        is ClipValidationResult.Invalid -> {
+                                            showMessage(context, result.reason)
+                                        }
+
+                                        ClipValidationResult.Valid -> {
+                                            clips = clips.map {
+                                                if (it.id == updated.id) {
+                                                    updated
+                                                } else {
+                                                    it
+                                                }
+                                            }
+
+                                            showMessage(
+                                                context,
+                                                "Clip trimmed successfully"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     )
 
@@ -660,6 +803,7 @@ private fun EditorScreen(
                         active = autoFace,
                         onClick = {
                             autoFace = !autoFace
+
                             showMessage(
                                 context,
                                 if (autoFace) {
@@ -674,7 +818,9 @@ private fun EditorScreen(
                     ToolButton(
                         label = "Preview",
                         icon = Icons.Default.ViewCarousel,
-                        onClick = { toolMode = ToolMode.PREVIEW }
+                        onClick = {
+                            toolMode = ToolMode.PREVIEW
+                        }
                     )
                 }
 
@@ -682,14 +828,19 @@ private fun EditorScreen(
                     ToolButton(
                         label = "Back",
                         icon = Icons.Default.ArrowBack,
-                        onClick = { toolMode = ToolMode.MAIN }
+                        onClick = {
+                            toolMode = ToolMode.MAIN
+                        }
                     )
 
                     ToolButton(
                         label = "Crop",
                         icon = Icons.Default.Crop,
                         onClick = {
-                            showMessage(context, "Crop editing is not connected yet")
+                            showMessage(
+                                context,
+                                "Crop editing is not connected yet"
+                            )
                         }
                     )
 
@@ -697,7 +848,10 @@ private fun EditorScreen(
                         label = "Resize",
                         icon = Icons.Default.AspectRatio,
                         onClick = {
-                            showMessage(context, "Resize editing is not connected yet")
+                            showMessage(
+                                context,
+                                "Resize editing is not connected yet"
+                            )
                         }
                     )
 
@@ -705,7 +859,10 @@ private fun EditorScreen(
                         label = "Zoom",
                         icon = Icons.Default.ZoomIn,
                         onClick = {
-                            showMessage(context, "Zoom editing is not connected yet")
+                            showMessage(
+                                context,
+                                "Zoom editing is not connected yet"
+                            )
                         }
                     )
 
@@ -713,7 +870,10 @@ private fun EditorScreen(
                         label = "Adjust",
                         icon = Icons.Default.Tune,
                         onClick = {
-                            showMessage(context, "Adjust controls are not connected yet")
+                            showMessage(
+                                context,
+                                "Adjust controls are not connected yet"
+                            )
                         }
                     )
                 }
@@ -722,7 +882,9 @@ private fun EditorScreen(
                     ToolButton(
                         label = "Back",
                         icon = Icons.Default.ArrowBack,
-                        onClick = { toolMode = ToolMode.MAIN }
+                        onClick = {
+                            toolMode = ToolMode.MAIN
+                        }
                     )
 
                     splitTemplates.forEach { template ->
@@ -732,6 +894,7 @@ private fun EditorScreen(
                             active = selectedTemplate == template.id,
                             onClick = {
                                 selectedTemplate = template.id
+
                                 showMessage(
                                     context,
                                     "${template.title}: ${template.description}. " +
@@ -779,16 +942,110 @@ private fun EditorScreen(
                         label = "Add Clip",
                         icon = Icons.Default.AddCircleOutline,
                         onClick = {
-                            showMessage(
-                                context,
-                                "Add Clip editing is not connected yet"
-                            )
+                            val startMs = parseTimeToMs(startTime)
+                            val endMs = parseTimeToMs(endTime)
+                            val durationMs = player.duration
+
+                            when {
+                                videoUri == null -> {
+                                    showMessage(
+                                        context,
+                                        "Import a video first"
+                                    )
+                                }
+
+                                startMs == null || endMs == null -> {
+                                    showMessage(
+                                        context,
+                                        "Enter valid start and end times"
+                                    )
+                                }
+
+                                endMs <= startMs -> {
+                                    showMessage(
+                                        context,
+                                        "End time must be after start time"
+                                    )
+                                }
+
+                                endMs - startMs >
+                                    ClipSegment.MAX_CLIP_DURATION_MS -> {
+                                    showMessage(
+                                        context,
+                                        "A clip cannot be longer than 3 minutes"
+                                    )
+                                }
+
+                                durationMs > 0L && endMs > durationMs -> {
+                                    showMessage(
+                                        context,
+                                        "End time exceeds video duration"
+                                    )
+                                }
+
+                                else -> {
+                                    val clip = ClipSegment(
+                                        name = "Clip $nextClipNumber",
+                                        startMs = startMs,
+                                        endMs = endMs
+                                    )
+
+                                    when (val result = clip.validate()) {
+                                        is ClipValidationResult.Invalid -> {
+                                            showMessage(context, result.reason)
+                                        }
+
+                                        ClipValidationResult.Valid -> {
+                                            clips = clips + clip
+                                            selectedClipId = clip.id
+                                            nextClipNumber += 1
+
+                                            showMessage(
+                                                context,
+                                                "${clip.name} added to timeline"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     )
                 }
             }
         }
     }
+}
+
+private fun parseTimeToMs(value: String): Long? {
+    val parts = value.trim().split(":")
+
+    if (parts.size !in 2..3 || parts.any { it.isBlank() }) {
+        return null
+    }
+
+    val numbers = parts.map {
+        it.toLongOrNull() ?: return null
+    }
+
+    if (numbers.any { it < 0L }) return null
+    if (numbers.last() >= 60L) return null
+    if (numbers.dropLast(1).any { it >= 60L }) return null
+
+    val totalSeconds = when (numbers.size) {
+        2 -> numbers[0] * 60L + numbers[1]
+        3 -> numbers[0] * 3600L + numbers[1] * 60L + numbers[2]
+        else -> return null
+    }
+
+    return totalSeconds * 1000L
+}
+
+private fun formatTime(ms: Long): String {
+    val totalSeconds = (ms / 1000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+
+    return "%02d:%02d".format(minutes, seconds)
 }
 
 @Composable
