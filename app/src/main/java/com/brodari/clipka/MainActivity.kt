@@ -343,11 +343,13 @@ private fun ProjectsScreen(
                 containerColor = Accent,
                 contentColor = Color(0xFF171914)
             )
-        ) {
+                ) {
             Text("Import Video")
         }
     }
-    @Composable
+}
+
+@Composable
 private fun EditorScreen(
     fileName: String,
     videoUri: Uri?,
