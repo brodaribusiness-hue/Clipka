@@ -1146,6 +1146,7 @@ private fun EditorScreen(
                 }
             }
         }
+       } 
 
 @Composable
 private fun PreviewScreen(
