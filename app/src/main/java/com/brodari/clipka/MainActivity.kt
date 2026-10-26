@@ -35,6 +35,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import java.net.URLDecoder
+import kotlinx.coroutines.delay
 
 private val AppBg = Color(0xFF101114)
 private val Panel = Color(0xFF1C1E23)
@@ -383,6 +384,21 @@ private fun EditorScreen(
     }
     var nextClipNumber by remember {
         mutableIntStateOf(1)
+    }
+        if (toolMode == ToolMode.PREVIEW) {
+        PreviewScreen(
+            fileName = fileName,
+            videoUri = videoUri,
+            player = player,
+            playing = playing,
+            selectedClip = clips.firstOrNull {
+                it.id == selectedClipId
+            },
+            onBack = {
+                toolMode = ToolMode.MAIN
+            }
+        )
+        return
     }
 
     Column(
@@ -863,6 +879,144 @@ private fun EditorScreen(
                                 context,
                                 "Zoom editing is not connected yet"
                             )
+
+        // Bottom tools: horizontal scrolling only.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            when (toolMode) {
+                ToolMode.MAIN -> {
+                    ToolButton(
+                        label = "Edit",
+                        icon = Icons.Default.Tune,
+                        onClick = { toolMode = ToolMode.EDIT }
+                    )
+
+                    ToolButton(
+                        label = "Trim",
+                        icon = Icons.Default.ContentCut,
+                        onClick = {
+                            val startMs = parseTimeToMs(startTime)
+                            val endMs = parseTimeToMs(endTime)
+                            val selected = clips.firstOrNull {
+                                it.id == selectedClipId
+                            }
+
+                            when {
+                                selected == null -> showMessage(
+                                    context,
+                                    "Select a clip from the timeline first"
+                                )
+
+                                startMs == null || endMs == null -> showMessage(
+                                    context,
+                                    "Enter valid start and end times"
+                                )
+
+                                endMs <= startMs -> showMessage(
+                                    context,
+                                    "End time must be after start time"
+                                )
+
+                                player.duration > 0L &&
+                                    endMs > player.duration -> showMessage(
+                                    context,
+                                    "End time exceeds video duration"
+                                )
+
+                                else -> {
+                                    val updated = selected.copy(
+                                        startMs = startMs,
+                                        endMs = endMs
+                                    )
+
+                                    when (val result = updated.validate()) {
+                                        is ClipValidationResult.Invalid ->
+                                            showMessage(context, result.reason)
+
+                                        ClipValidationResult.Valid -> {
+                                            clips = clips.map {
+                                                if (it.id == updated.id) updated else it
+                                            }
+                                            showMessage(
+                                                context,
+                                                "Clip trimmed successfully"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Auto Clip",
+                        icon = Icons.Default.AutoAwesome,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Automatic clip detection is not connected yet"
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = if (autoFace) "Face ON" else "Face Detect",
+                        icon = Icons.Default.Face,
+                        active = autoFace,
+                        onClick = {
+                            autoFace = !autoFace
+                            showMessage(
+                                context,
+                                if (autoFace) {
+                                    "Face detection UI enabled; tracking is not connected"
+                                } else {
+                                    "Face detection UI disabled"
+                                }
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Preview",
+                        icon = Icons.Default.ViewCarousel,
+                        onClick = { toolMode = ToolMode.PREVIEW }
+                    )
+                }
+
+                ToolMode.EDIT -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = { toolMode = ToolMode.MAIN }
+                    )
+
+                    ToolButton(
+                        label = "Crop",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            showMessage(context, "Crop editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Resize",
+                        icon = Icons.Default.AspectRatio,
+                        onClick = {
+                            showMessage(context, "Resize editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Zoom",
+                        icon = Icons.Default.ZoomIn,
+                        onClick = {
+                            showMessage(context, "Zoom editing is not connected yet")
                         }
                     )
 
@@ -870,20 +1024,7 @@ private fun EditorScreen(
                         label = "Adjust",
                         icon = Icons.Default.Tune,
                         onClick = {
-                            showMessage(
-                                context,
-                                "Adjust controls are not connected yet"
-                            )
-                        }
-                    )
-                }
-
-                ToolMode.PREVIEW -> {
-                    ToolButton(
-                        label = "Back",
-                        icon = Icons.Default.ArrowBack,
-                        onClick = {
-                            toolMode = ToolMode.MAIN
+                            showMessage(context, "Adjust controls are not connected yet")
                         }
                     )
 
@@ -894,7 +1035,6 @@ private fun EditorScreen(
                             active = selectedTemplate == template.id,
                             onClick = {
                                 selectedTemplate = template.id
-
                                 showMessage(
                                     context,
                                     "${template.title}: ${template.description}. " +
@@ -947,41 +1087,32 @@ private fun EditorScreen(
                             val durationMs = player.duration
 
                             when {
-                                videoUri == null -> {
-                                    showMessage(
-                                        context,
-                                        "Import a video first"
-                                    )
-                                }
+                                videoUri == null -> showMessage(
+                                    context,
+                                    "Import a video first"
+                                )
 
-                                startMs == null || endMs == null -> {
-                                    showMessage(
-                                        context,
-                                        "Enter valid start and end times"
-                                    )
-                                }
+                                startMs == null || endMs == null -> showMessage(
+                                    context,
+                                    "Enter valid start and end times"
+                                )
 
-                                endMs <= startMs -> {
-                                    showMessage(
-                                        context,
-                                        "End time must be after start time"
-                                    )
-                                }
+                                endMs <= startMs -> showMessage(
+                                    context,
+                                    "End time must be after start time"
+                                )
 
                                 endMs - startMs >
-                                    ClipSegment.MAX_CLIP_DURATION_MS -> {
-                                    showMessage(
-                                        context,
-                                        "A clip cannot be longer than 3 minutes"
-                                    )
-                                }
+                                    ClipSegment.MAX_CLIP_DURATION_MS -> showMessage(
+                                    context,
+                                    "A clip cannot be longer than 3 minutes"
+                                )
 
-                                durationMs > 0L && endMs > durationMs -> {
+                                durationMs > 0L && endMs > durationMs ->
                                     showMessage(
                                         context,
                                         "End time exceeds video duration"
                                     )
-                                }
 
                                 else -> {
                                     val clip = ClipSegment(
@@ -991,15 +1122,13 @@ private fun EditorScreen(
                                     )
 
                                     when (val result = clip.validate()) {
-                                        is ClipValidationResult.Invalid -> {
+                                        is ClipValidationResult.Invalid ->
                                             showMessage(context, result.reason)
-                                        }
 
                                         ClipValidationResult.Valid -> {
                                             clips = clips + clip
                                             selectedClipId = clip.id
                                             nextClipNumber += 1
-
                                             showMessage(
                                                 context,
                                                 "${clip.name} added to timeline"
@@ -1011,8 +1140,221 @@ private fun EditorScreen(
                         }
                     )
                 }
+
+                ToolMode.PREVIEW -> {
+                    // PreviewScreen is displayed before the editor Column.
+                }
             }
         }
+
+@Composable
+private fun PreviewScreen(
+    fileName: String,
+    videoUri: Uri?,
+    player: ExoPlayer,
+    playing: Boolean,
+    selectedClip: ClipSegment?,
+    onBack: () -> Unit
+) {
+    var positionMs by remember { mutableStateOf(0L) }
+
+    val sourceDuration = player.duration.coerceAtLeast(1L)
+    val rangeStart = (selectedClip?.startMs ?: 0L).coerceAtLeast(0L)
+    val rangeEnd = (selectedClip?.endMs ?: sourceDuration)
+        .coerceAtLeast(rangeStart + 1L)
+    val sliderMax = rangeEnd.toFloat()
+    val sliderMin = rangeStart.toFloat()
+
+    LaunchedEffect(player, selectedClip?.id) {
+        player.pause()
+        player.seekTo(rangeStart)
+        positionMs = rangeStart
+    }
+
+    LaunchedEffect(player, playing, selectedClip?.id) {
+        while (true) {
+            val current = player.currentPosition.coerceAtLeast(0L)
+
+            if (selectedClip != null && playing && current >= rangeEnd) {
+                player.pause()
+                player.seekTo(rangeStart)
+                positionMs = rangeStart
+            } else {
+                positionMs = current
+            }
+
+            delay(100L)
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppBg)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = {
+                    player.pause()
+                    onBack()
+                }
+            ) {
+                Icon(
+                    Icons.Default.ArrowBack,
+                    contentDescription = "Back to editor",
+                    tint = MainText
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp)
+            ) {
+                Text(
+                    text = "Preview",
+                    color = MainText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+                Text(
+                    text = selectedClip?.name ?: fileName,
+                    color = Muted,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(Color.Black, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (videoUri != null) {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { viewContext ->
+                        PlayerView(viewContext).apply {
+                            this.player = player
+                            useController = false
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        }
+                    },
+                    update = { view ->
+                        view.player = player
+                        view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                )
+            } else {
+                Text("Import a video first", color = Muted)
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formatTime(positionMs),
+                color = MainText,
+                fontSize = 12.sp
+            )
+
+            Spacer(Modifier.weight(1f))
+
+            Text(
+                text = formatTime(
+                    selectedClip?.endMs ?: player.duration.coerceAtLeast(0L)
+                ),
+                color = Muted,
+                fontSize = 12.sp
+            )
+        }
+
+        Slider(
+            value = positionMs.coerceIn(
+                rangeStart,
+                rangeEnd
+            ).toFloat(),
+            onValueChange = { value ->
+                positionMs = value.toLong()
+            },
+            onValueChangeFinished = {
+                player.seekTo(positionMs.coerceIn(rangeStart, rangeEnd))
+            },
+            valueRange = sliderMin..sliderMax,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(36.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = Accent,
+                activeTrackColor = Accent,
+                inactiveTrackColor = Color(0xFF44464D)
+            )
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(58.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilledIconButton(
+                onClick = {
+                    if (player.isPlaying) {
+                        player.pause()
+                    } else {
+                        val current = player.currentPosition
+                        if (
+                            selectedClip != null &&
+                            (current < rangeStart || current >= rangeEnd)
+                        ) {
+                            player.seekTo(rangeStart)
+                        }
+                        player.play()
+                    }
+                },
+                modifier = Modifier.size(50.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = Accent,
+                    contentColor = Color(0xFF171914)
+                )
+            ) {
+                Icon(
+                    if (playing) Icons.Default.Pause
+                    else Icons.Default.PlayArrow,
+                    contentDescription = if (playing) "Pause" else "Play",
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+        }
+
+        Text(
+            text = if (selectedClip != null) {
+                "Clip range: ${formatTime(selectedClip.startMs)} – " +
+                    formatTime(selectedClip.endMs)
+            } else {
+                "Full imported video"
+            },
+            color = Muted,
+            fontSize = 11.sp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 4.dp)
+        )
     }
 }
 
