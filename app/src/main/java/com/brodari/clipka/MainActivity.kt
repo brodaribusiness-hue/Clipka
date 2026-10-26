@@ -1132,6 +1132,143 @@ private fun EditorScreen(
 
                     ToolButton(
                         label = "Resize",
+
+        // Bottom tools: one clean toolbar with no duplicate branches.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            when (toolMode) {
+                ToolMode.MAIN -> {
+                    ToolButton(
+                        label = "Edit",
+                        icon = Icons.Default.Tune,
+                        onClick = { toolMode = ToolMode.EDIT }
+                    )
+
+                    ToolButton(
+                        label = "Trim",
+                        icon = Icons.Default.ContentCut,
+                        onClick = {
+                            val startMs = parseTimeToMs(startTime)
+                            val endMs = parseTimeToMs(endTime)
+                            val selected = clips.firstOrNull {
+                                it.id == selectedClipId
+                            }
+
+                            when {
+                                selected == null -> showMessage(
+                                    context,
+                                    "Select a clip from the timeline first"
+                                )
+
+                                startMs == null || endMs == null ->
+                                    showMessage(
+                                        context,
+                                        "Enter valid start and end times"
+                                    )
+
+                                endMs <= startMs -> showMessage(
+                                    context,
+                                    "End time must be after start time"
+                                )
+
+                                player.duration > 0L &&
+                                    endMs > player.duration -> showMessage(
+                                    context,
+                                    "End time exceeds video duration"
+                                )
+
+                                else -> {
+                                    val updated = selected.copy(
+                                        startMs = startMs,
+                                        endMs = endMs
+                                    )
+
+                                    when (val result = updated.validate()) {
+                                        is ClipValidationResult.Invalid ->
+                                            showMessage(context, result.reason)
+
+                                        ClipValidationResult.Valid -> {
+                                            clips = clips.map { clip ->
+                                                if (clip.id == updated.id) {
+                                                    updated
+                                                } else {
+                                                    clip
+                                                }
+                                            }
+                                            startTime = formatTime(updated.startMs)
+                                            endTime = formatTime(updated.endMs)
+                                            showMessage(
+                                                context,
+                                                "Clip trimmed successfully"
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Auto Clip",
+                        icon = Icons.Default.AutoAwesome,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Automatic clip detection is not connected yet"
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = if (autoFace) "Face ON" else "Face Detect",
+                        icon = Icons.Default.Face,
+                        active = autoFace,
+                        onClick = {
+                            autoFace = !autoFace
+                            showMessage(
+                                context,
+                                if (autoFace) {
+                                    "Face detection UI enabled; tracking is not connected"
+                                } else {
+                                    "Face detection UI disabled"
+                                }
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Preview",
+                        icon = Icons.Default.ViewCarousel,
+                        onClick = { toolMode = ToolMode.PREVIEW }
+                    )
+                }
+
+                ToolMode.EDIT -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = { toolMode = ToolMode.MAIN }
+                    )
+
+                    ToolButton(
+                        label = "Crop",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Crop editing is not connected yet"
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Resize",
                         icon = Icons.Default.AspectRatio,
                         onClick = {
                             showMessage(
@@ -1172,8 +1309,7 @@ private fun EditorScreen(
                                 selectedTemplate = template.id
                                 showMessage(
                                     context,
-                                    "${template.title}: " +
-                                        "${template.description}. " +
+                                    "${template.title}: ${template.description}. " +
                                         "Rendering integration is not connected yet."
                                 )
                             }
@@ -1218,80 +1354,59 @@ private fun EditorScreen(
                         label = "Add Clip",
                         icon = Icons.Default.AddCircleOutline,
                         onClick = {
-                            val parsedStartMs =
-                                parseTimeToMs(startTime)
-                            val parsedEndMs =
-                                parseTimeToMs(endTime)
+                            val startMs = parseTimeToMs(startTime)
+                            val endMs = parseTimeToMs(endTime)
                             val durationMs = player.duration
 
-                            if (videoUri == null) {
-                                showMessage(
+                            when {
+                                videoUri == null -> showMessage(
                                     context,
                                     "Import a video first"
                                 )
-                            } else if (
-                                parsedStartMs == null ||
-                                parsedEndMs == null
-                            ) {
-                                showMessage(
+
+                                startMs == null || endMs == null ->
+                                    showMessage(
+                                        context,
+                                        "Enter valid start and end times"
+                                    )
+
+                                endMs <= startMs -> showMessage(
                                     context,
-                                    "Enter valid start and end times"
+                                    "End time must be after start time"
                                 )
-                            } else {
-                                val validStartMs = parsedStartMs
-                                val validEndMs = parsedEndMs
 
-                                when {
-                                    validEndMs <= validStartMs -> {
-                                        showMessage(
-                                            context,
-                                            "End time must be after start time"
-                                        )
-                                    }
+                                endMs - startMs >
+                                    ClipSegment.MAX_CLIP_DURATION_MS ->
+                                    showMessage(
+                                        context,
+                                        "A clip cannot be longer than 3 minutes"
+                                    )
 
-                                    validEndMs - validStartMs >
-                                        ClipSegment.MAX_CLIP_DURATION_MS -> {
-                                        showMessage(
-                                            context,
-                                            "A clip cannot be longer than 3 minutes"
-                                        )
-                                    }
+                                durationMs > 0L && endMs > durationMs ->
+                                    showMessage(
+                                        context,
+                                        "End time exceeds video duration"
+                                    )
 
-                                    durationMs > 0L &&
-                                        validEndMs > durationMs -> {
-                                        showMessage(
-                                            context,
-                                            "End time exceeds video duration"
-                                        )
-                                    }
+                                else -> {
+                                    val clip = ClipSegment(
+                                        name = "Clip $nextClipNumber",
+                                        startMs = startMs,
+                                        endMs = endMs
+                                    )
 
-                                    else -> {
-                                        val clip = ClipSegment(
-                                            name = "Clip $nextClipNumber",
-                                            startMs = validStartMs,
-                                            endMs = validEndMs
-                                        )
+                                    when (val result = clip.validate()) {
+                                        is ClipValidationResult.Invalid ->
+                                            showMessage(context, result.reason)
 
-                                        when (
-                                            val result = clip.validate()
-                                        ) {
-                                            is ClipValidationResult.Invalid -> {
-                                                showMessage(
-                                                    context,
-                                                    result.reason
-                                                )
-                                            }
-
-                                            ClipValidationResult.Valid -> {
-                                                clips = clips + clip
-                                                selectedClipId = clip.id
-                                                nextClipNumber += 1
-
-                                                showMessage(
-                                                    context,
-                                                    "${clip.name} added to timeline"
-                                                )
-                                            }
+                                        ClipValidationResult.Valid -> {
+                                            clips = clips + clip
+                                            selectedClipId = clip.id
+                                            nextClipNumber += 1
+                                            showMessage(
+                                                context,
+                                                "${clip.name} added to timeline"
+                                            )
                                         }
                                     }
                                 }
@@ -1301,12 +1416,13 @@ private fun EditorScreen(
                 }
 
                 ToolMode.PREVIEW -> {
-                    // PreviewScreen is displayed before the editor Column.
+                    // PreviewScreen is shown above the editor layout.
                 }
             }
         }
     }
-                        }
+}
+
 
 @Composable
 private fun PreviewScreen(
