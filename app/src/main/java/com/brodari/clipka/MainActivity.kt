@@ -1064,6 +1064,82 @@ private fun EditorScreen(
                                 context,
                                 "Manual framing is not connected to this editor yet"
                             )
+
+                ToolMode.EDIT -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = { toolMode = ToolMode.MAIN }
+                    )
+
+                    ToolButton(
+                        label = "Crop",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            showMessage(context, "Crop editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Resize",
+                        icon = Icons.Default.AspectRatio,
+                        onClick = {
+                            showMessage(context, "Resize editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Zoom",
+                        icon = Icons.Default.ZoomIn,
+                        onClick = {
+                            showMessage(context, "Zoom editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Adjust",
+                        icon = Icons.Default.Tune,
+                        onClick = {
+                            showMessage(context, "Adjust controls are not connected yet")
+                        }
+                    )
+
+                    splitTemplates.forEach { template ->
+                        ToolButton(
+                            label = template.title,
+                            icon = Icons.Default.ViewQuilt,
+                            active = selectedTemplate == template.id,
+                            onClick = {
+                                selectedTemplate = template.id
+                                showMessage(
+                                    context,
+                                    "${template.title}: ${template.description}. " +
+                                        "Rendering integration is not connected yet."
+                                )
+                            }
+                        )
+                    }
+
+                    ToolButton(
+                        label = "Ratio",
+                        icon = Icons.Default.CropSquare,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Aspect ratio options: 9:16, 16:9, 1:1 and 4:5. " +
+                                    "Ratio editing is not connected yet."
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Manual Frame",
+                        icon = Icons.Default.OpenWith,
+                        onClick = {
+                            showMessage(
+                                context,
+                                "Manual framing is not connected to this editor yet"
+                            )
                         }
                     )
 
@@ -1115,10 +1191,13 @@ private fun EditorScreen(
                                     )
 
                                 else -> {
+                                    val validStartMs = requireNotNull(startMs)
+                                    val validEndMs = requireNotNull(endMs)
+
                                     val clip = ClipSegment(
                                         name = "Clip $nextClipNumber",
-                                        startMs = startMs,
-                                        endMs = endMs
+                                        startMs = validStartMs,
+                                        endMs = validEndMs
                                     )
 
                                     when (val result = clip.validate()) {
@@ -1141,13 +1220,14 @@ private fun EditorScreen(
                     )
                 }
 
-                                ToolMode.PREVIEW -> {
+                ToolMode.PREVIEW -> {
                     // PreviewScreen is displayed before the editor Column.
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun PreviewScreen(
