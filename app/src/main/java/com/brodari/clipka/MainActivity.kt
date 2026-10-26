@@ -1100,6 +1100,42 @@ private fun EditorScreen(
                         label = "Adjust",
                         icon = Icons.Default.Tune,
                         onClick = {
+
+                ToolMode.EDIT -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = { toolMode = ToolMode.MAIN }
+                    )
+
+                    ToolButton(
+                        label = "Crop",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            showMessage(context, "Crop editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Resize",
+                        icon = Icons.Default.AspectRatio,
+                        onClick = {
+                            showMessage(context, "Resize editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Zoom",
+                        icon = Icons.Default.ZoomIn,
+                        onClick = {
+                            showMessage(context, "Zoom editing is not connected yet")
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Adjust",
+                        icon = Icons.Default.Tune,
+                        onClick = {
                             showMessage(context, "Adjust controls are not connected yet")
                         }
                     )
@@ -1227,6 +1263,7 @@ private fun EditorScreen(
         }
     }
 }
+
 
 
 @Composable
