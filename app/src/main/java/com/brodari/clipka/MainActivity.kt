@@ -1038,6 +1038,7 @@ onSelectTemplate: (SplitTemplate) -> Unit,
     onBack: () -> Unit
 ) {
     var positionMs by remember { mutableStateOf(0L) }
+        val context = LocalContext.current
 
     val sourceDuration = player.duration.coerceAtLeast(1L)
     val rangeStart = (selectedClip?.startMs ?: 0L).coerceAtLeast(0L)
