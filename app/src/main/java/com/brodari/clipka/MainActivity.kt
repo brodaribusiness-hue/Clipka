@@ -395,6 +395,14 @@ private fun EditorScreen(
             selectedClip = clips.firstOrNull {
                 it.id == selectedClipId
             },
+            selectedTemplate = selectedTemplate,
+onSelectTemplate = { template ->
+    selectedTemplate = template.id
+    showMessage(
+        context,
+        "${template.title}: ${template.description}"
+    )
+},
             onBack = {
                 toolMode = ToolMode.MAIN
             }
@@ -900,33 +908,7 @@ private fun EditorScreen(
                         }
                     )
 
-                    splitTemplates.forEach { template ->
-                        ToolButton(
-                            label = template.title,
-                            icon = Icons.Default.ViewQuilt,
-                            active = selectedTemplate == template.id,
-                            onClick = {
-                                selectedTemplate = template.id
-                                showMessage(
-                                    context,
-                                    "${template.title}: ${template.description}. " +
-                                        "Rendering integration is not connected yet."
-                                )
-                            }
-                        )
-                    }
-
-                    ToolButton(
-                        label = "Ratio",
-                        icon = Icons.Default.CropSquare,
-                        onClick = {
-                            showMessage(
-                                context,
-                                "Aspect ratio options: 9:16, 16:9, 1:1. " +
-                                    "Ratio editing is not connected yet."
-                            )
-                        }
-                    )
+                    
 
                     ToolButton(
                         label = "Manual Frame",
@@ -1051,6 +1033,8 @@ private fun PreviewScreen(
     player: ExoPlayer,
     playing: Boolean,
     selectedClip: ClipSegment?,
+    selectedTemplate: Int,
+onSelectTemplate: (SplitTemplate) -> Unit,
     onBack: () -> Unit
 ) {
     var positionMs by remember { mutableStateOf(0L) }
@@ -1201,6 +1185,66 @@ private fun PreviewScreen(
                 inactiveTrackColor = Color(0xFF44464D)
             )
         )
+                // Split-screen templates toolbar
+        Text(
+            text = "SPLIT-SCREEN TEMPLATES",
+            color = Muted,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(
+                top = 6.dp,
+                bottom = 4.dp
+            )
+        )
+                // Compact aspect ratio selector
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(34.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf("9:16", "1:1", "16:9").forEach { ratio ->
+                FilterChip(
+                    selected = false,
+                    onClick = {
+                        showMessage(
+                            context,
+                            "$ratio selected"
+                        )
+                    },
+                    label = {
+                        Text(
+                            ratio,
+                            fontSize = 10.sp
+                        )
+                    },
+                    modifier = Modifier.height(30.dp)
+                )
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            splitTemplates.forEach { template ->
+                ToolButton(
+                    label = template.title,
+                    icon = Icons.Default.ViewQuilt,
+                    active = selectedTemplate == template.id,
+                    onClick = {
+                        onSelectTemplate(template)
+                    }
+                )
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
 
         Row(
             modifier = Modifier
