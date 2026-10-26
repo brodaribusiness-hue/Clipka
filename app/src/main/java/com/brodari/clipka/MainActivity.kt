@@ -1306,17 +1306,7 @@ private fun EditorScreen(
             }
         }
     }
-}
-
-                ToolMode.PREVIEW -> {
-                    // PreviewScreen is displayed before the editor Column.
-                }
-            }
-        }
-    }
-}
-
-
+                        }
 
 @Composable
 private fun PreviewScreen(
