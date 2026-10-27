@@ -1024,6 +1024,103 @@ else -> {
                         label = "Auto Clip",
                         icon = Icons.Default.AutoAwesome,
                         onClick = {
+// Bottom tools: one clean horizontal toolbar.
+
+        fun trimSelectedClip() {
+            val selected = clips.firstOrNull {
+                it.id == selectedClipId
+            }
+
+            if (selected == null) {
+                showMessage(context, "Select a clip from the timeline first")
+                return
+            }
+
+            val parsedStartMs = parseTimeToMs(startTime)
+            val parsedEndMs = parseTimeToMs(endTime)
+
+            if (parsedStartMs == null || parsedEndMs == null) {
+                showMessage(context, "Enter valid start and end times")
+                return
+            }
+
+            if (parsedEndMs <= parsedStartMs) {
+                showMessage(context, "End time must be after start time")
+                return
+            }
+
+            if (
+                parsedEndMs - parsedStartMs >
+                ClipSegment.MAX_CLIP_DURATION_MS
+            ) {
+                showMessage(context, "A clip cannot be longer than 3 minutes")
+                return
+            }
+
+            if (
+                player.duration > 0L &&
+                parsedEndMs > player.duration
+            ) {
+                showMessage(context, "End time exceeds video duration")
+                return
+            }
+
+            val updated = selected.copy(
+                startMs = parsedStartMs,
+                endMs = parsedEndMs
+            )
+
+            when (val result = updated.validate()) {
+                is ClipValidationResult.Invalid -> {
+                    showMessage(context, result.reason)
+                }
+
+                ClipValidationResult.Valid -> {
+                    saveUndoState()
+
+                    clips = clips.map { clip ->
+                        if (clip.id == updated.id) updated else clip
+                    }
+
+                    startTime = formatTime(updated.startMs)
+                    endTime = formatTime(updated.endMs)
+                    player.seekTo(updated.startMs)
+
+                    showMessage(context, "Clip trimmed successfully")
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            when (toolMode) {
+                ToolMode.MAIN -> {
+                    ToolButton(
+                        label = "Edit",
+                        icon = Icons.Default.Tune,
+                        onClick = {
+                            toolMode = ToolMode.EDIT
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Trim",
+                        icon = Icons.Default.ContentCut,
+                        onClick = {
+                            trimSelectedClip()
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Auto Clip",
+                        icon = Icons.Default.AutoAwesome,
+                        onClick = {
                             showMessage(
                                 context,
                                 "Automatic clip detection is not connected yet"
@@ -1051,7 +1148,9 @@ else -> {
                     ToolButton(
                         label = "Preview",
                         icon = Icons.Default.ViewCarousel,
-                        onClick = { toolMode = ToolMode.PREVIEW }
+                        onClick = {
+                            toolMode = ToolMode.PREVIEW
+                        }
                     )
                 }
 
@@ -1059,7 +1158,9 @@ else -> {
                     ToolButton(
                         label = "Back",
                         icon = Icons.Default.ArrowBack,
-                        onClick = { toolMode = ToolMode.MAIN }
+                        onClick = {
+                            toolMode = ToolMode.MAIN
+                        }
                     )
 
                     ToolButton(
@@ -1096,7 +1197,7 @@ else -> {
                 }
 
                 ToolMode.PREVIEW -> {
-                    // PreviewScreen is rendered by the early return above.
+                    // PreviewScreen is displayed by the early return above.
                 }
             }
         }
