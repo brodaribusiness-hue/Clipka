@@ -514,10 +514,11 @@ private fun EditorScreen(
             videoUri = videoUri,
             player = player,
             playing = playing,
-            selectedClip = clips.firstOrNull {
+                        selectedClip = clips.firstOrNull {
                 it.id == selectedClipId
             },
-                        onSelectTemplate = { template ->
+            selectedTemplate = selectedTemplate,
+            onSelectTemplate = { template ->
                 selectedTemplate = template.id
                 showMessage(
                     context,
@@ -1046,8 +1047,7 @@ private fun PreviewScreen(
     videoUri: Uri?,
     player: ExoPlayer,
     playing: Boolean,
-    selectedClip: ClipSegment?,
-    selectedTemplate: Int,
+        selectedClip: ClipSegment?,
     selectedTemplate: Int,
     onSelectTemplate: (SplitTemplate) -> Unit,
     onAddClip: () -> Unit,
