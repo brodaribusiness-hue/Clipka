@@ -452,6 +452,61 @@ private fun EditorScreen(
         startTime = next.startTime
         endTime = next.endTime
     }
+    
+    fun addClipFromRange(): Boolean {
+        if (videoUri == null) {
+            showMessage(context, "Import a video first")
+            return false
+        }
+
+        val startMs = parseTimeToMs(startTime)
+        val endMs = parseTimeToMs(endTime)
+        val durationMs = player.duration
+
+        if (startMs == null || endMs == null) {
+            showMessage(context, "Enter valid start and end times")
+            return false
+        }
+
+        if (startMs < 0L || endMs <= startMs) {
+            showMessage(context, "End time must be after start time")
+            return false
+        }
+
+        if (durationMs <= 0L) {
+            showMessage(context, "Wait for the video to load")
+            return false
+        }
+
+        if (endMs > durationMs) {
+            showMessage(context, "End time exceeds video duration")
+            return false
+        }
+
+        val newClip = ClipSegment(
+            name = "Clip $nextClipNumber",
+            startMs = startMs,
+            endMs = endMs
+        )
+
+        when (val result = newClip.validate()) {
+            is ClipValidationResult.Invalid -> {
+                showMessage(context, result.reason)
+                return false
+            }
+
+            ClipValidationResult.Valid -> {
+                saveUndoState()
+                clips = clips + newClip
+                selectedClipId = newClip.id
+                nextClipNumber += 1
+                player.seekTo(startMs)
+                showMessage(context, "${newClip.name} added")
+                return true
+            }
+        }
+    }
+
 
     if (toolMode == ToolMode.PREVIEW) {
         PreviewScreen(
@@ -462,17 +517,22 @@ private fun EditorScreen(
             selectedClip = clips.firstOrNull {
                 it.id == selectedClipId
             },
-            selectedTemplate = selectedTemplate,
-onSelectTemplate = { template ->
-    selectedTemplate = template.id
-    showMessage(
-        context,
-        "${template.title}: ${template.description}"
-    )
-},
+                        onSelectTemplate = { template ->
+                selectedTemplate = template.id
+                showMessage(
+                    context,
+                    "${template.title}: ${template.description}"
+                )
+            },
+            onAddClip = {
+                if (addClipFromRange()) {
+                    toolMode = ToolMode.MAIN
+                }
+            },
             onBack = {
                 toolMode = ToolMode.MAIN
             }
+               
         )
         return
     }
@@ -988,7 +1048,9 @@ private fun PreviewScreen(
     playing: Boolean,
     selectedClip: ClipSegment?,
     selectedTemplate: Int,
-onSelectTemplate: (SplitTemplate) -> Unit,
+    selectedTemplate: Int,
+    onSelectTemplate: (SplitTemplate) -> Unit,
+    onAddClip: () -> Unit,
     onBack: () -> Unit
 ) {
     var positionMs by remember { mutableStateOf(0L) }
@@ -1197,6 +1259,26 @@ onSelectTemplate: (SplitTemplate) -> Unit,
                     }
                 )
             }
+        }
+
+                Spacer(Modifier.height(4.dp))
+
+        Button(
+            onClick = onAddClip,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Accent,
+                contentColor = Color(0xFF171914)
+            )
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = null
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("Add Clip", fontWeight = FontWeight.Bold)
         }
 
         Spacer(Modifier.height(4.dp))
