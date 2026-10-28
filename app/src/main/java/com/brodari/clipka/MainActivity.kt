@@ -789,10 +789,11 @@ private fun EditorScreen(
                                 },
                                 RoundedCornerShape(7.dp)
                             )
-                            .clickable {
+                                                        .clickable {
                                 selectedClipId = clip.id
                                 startTime = formatTime(clip.startMs)
                                 endTime = formatTime(clip.endMs)
+                                player.seekTo(clip.startMs)
                             }
                             .padding(7.dp)
                     ) {
@@ -820,20 +821,33 @@ private fun EditorScreen(
                             fontSize = 10.sp
                         )
 
-                        TextButton(
+                                                TextButton(
                             onClick = {
-    saveUndoState()
+                                saveUndoState()
 
-    clips = clips.filterNot {
-        it.id == clip.id
-    }
+                                val remainingClips = clips.filterNot {
+                                    it.id == clip.id
+                                }
 
-    if (selectedClipId == clip.id) {
-        selectedClipId = null
-        startTime = "00:00"
-        endTime = "00:30"
-    }
-},
+                                clips = remainingClips
+
+                                if (selectedClipId == clip.id) {
+                                    val nextClip = remainingClips.firstOrNull()
+
+                                    selectedClipId = nextClip?.id
+
+                                    if (nextClip != null) {
+                                        startTime = formatTime(nextClip.startMs)
+                                        endTime = formatTime(nextClip.endMs)
+                                        player.seekTo(nextClip.startMs)
+                                    } else {
+                                        startTime = "00:00"
+                                        endTime = "00:30"
+                                    }
+                                }
+
+                                showMessage(context, "${clip.name} deleted")
+                            },
                             contentPadding = PaddingValues(0.dp),
                             modifier = Modifier.height(25.dp)
                         ) {
