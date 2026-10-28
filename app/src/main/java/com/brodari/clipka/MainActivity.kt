@@ -1100,6 +1100,86 @@ else -> {
             verticalAlignment = Alignment.CenterVertically
         ) {
             when (toolMode) {
+
+        Spacer(Modifier.height(7.dp))
+
+        // Phase 1: One clean bottom toolbar and one trim implementation.
+
+        fun trimSelectedClip() {
+            val selected = clips.firstOrNull {
+                it.id == selectedClipId
+            }
+
+            if (selected == null) {
+                showMessage(context, "Select a clip from the timeline first")
+                return
+            }
+
+            val parsedStartMs = parseTimeToMs(startTime)
+            val parsedEndMs = parseTimeToMs(endTime)
+
+            if (parsedStartMs == null || parsedEndMs == null) {
+                showMessage(context, "Enter valid start and end times")
+                return
+            }
+
+            if (parsedEndMs <= parsedStartMs) {
+                showMessage(context, "End time must be after start time")
+                return
+            }
+
+            if (
+                parsedEndMs - parsedStartMs >
+                ClipSegment.MAX_CLIP_DURATION_MS
+            ) {
+                showMessage(context, "A clip cannot be longer than 3 minutes")
+                return
+            }
+
+            if (
+                player.duration > 0L &&
+                parsedEndMs > player.duration
+            ) {
+                showMessage(context, "End time exceeds video duration")
+                return
+            }
+
+            val updated = selected.copy(
+                startMs = parsedStartMs,
+                endMs = parsedEndMs
+            )
+
+            when (val result = updated.validate()) {
+                is ClipValidationResult.Invalid -> {
+                    showMessage(context, result.reason)
+                }
+
+                ClipValidationResult.Valid -> {
+                    saveUndoState()
+
+                    clips = clips.map { clip ->
+                        if (clip.id == updated.id) updated else clip
+                    }
+
+                    startTime = formatTime(updated.startMs)
+                    endTime = formatTime(updated.endMs)
+                    player.seekTo(updated.startMs)
+
+                    showMessage(context, "Clip trimmed successfully")
+                }
+            }
+        }
+
+        // One horizontally scrollable toolbar.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            when (toolMode) {
                 ToolMode.MAIN -> {
                     ToolButton(
                         label = "Edit",
@@ -1123,7 +1203,7 @@ else -> {
                         onClick = {
                             showMessage(
                                 context,
-                                "Automatic clip detection is not connected yet"
+                                "Auto Clip will be implemented in Phase 2"
                             )
                         }
                     )
@@ -1137,9 +1217,9 @@ else -> {
                             showMessage(
                                 context,
                                 if (autoFace) {
-                                    "Face detection UI enabled; tracking is not connected"
+                                    "Face tracking is not connected yet"
                                 } else {
-                                    "Face detection UI disabled"
+                                    "Face detection disabled"
                                 }
                             )
                         }
@@ -1167,7 +1247,10 @@ else -> {
                         label = "Crop",
                         icon = Icons.Default.Crop,
                         onClick = {
-                            showMessage(context, "Crop editing is not connected yet")
+                            showMessage(
+                                context,
+                                "Crop editing will be implemented in Phase 2"
+                            )
                         }
                     )
 
@@ -1175,7 +1258,10 @@ else -> {
                         label = "Resize",
                         icon = Icons.Default.AspectRatio,
                         onClick = {
-                            showMessage(context, "Resize editing is not connected yet")
+                            showMessage(
+                                context,
+                                "Resize editing will be implemented in Phase 2"
+                            )
                         }
                     )
 
@@ -1183,7 +1269,10 @@ else -> {
                         label = "Zoom",
                         icon = Icons.Default.ZoomIn,
                         onClick = {
-                            showMessage(context, "Zoom editing is not connected yet")
+                            showMessage(
+                                context,
+                                "Zoom editing will be implemented in Phase 2"
+                            )
                         }
                     )
 
@@ -1191,7 +1280,10 @@ else -> {
                         label = "Adjust",
                         icon = Icons.Default.Tune,
                         onClick = {
-                            showMessage(context, "Adjust controls are not connected yet")
+                            showMessage(
+                                context,
+                                "Adjust controls will be implemented in Phase 2"
+                            )
                         }
                     )
                 }
@@ -1203,6 +1295,7 @@ else -> {
         }
     }
 }
+
 
         
 @Composable
