@@ -1197,10 +1197,18 @@ private fun PreviewScreen(
             }
         }
 
+        
+        val previewAspectRatio = when (selectedClip?.aspectRatio) {
+            "1:1" -> 1f
+            "16:9" -> 16f / 9f
+            else -> 9f / 16f
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .aspectRatio(previewAspectRatio)
                 .background(Color.Black, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
@@ -1223,6 +1231,7 @@ private fun PreviewScreen(
                 Text("Import a video first", color = Muted)
             }
         }
+
 
         Spacer(Modifier.height(8.dp))
 
