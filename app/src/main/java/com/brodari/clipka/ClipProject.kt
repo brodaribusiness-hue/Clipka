@@ -127,19 +127,21 @@ import java.util.UUID
      }
  }
 
-  if (
-     frameLayout in setOf(
-         "SPLIT_VERTICAL",
-         "SPLIT_60_40",
-         "SPLIT_40_60",
-         "SPLIT_HORIZONTAL",
-         "SPLIT_DIAGONAL"
-     ) && frames.size < 2
- ) {
-     return ClipValidationResult.Invalid(
-         "Split layouts need at least 2 frames."
-     )
- }
+  
+    if (
+        frameLayout in setOf(
+            "SPLIT_VERTICAL",
+            "SPLIT_60_40",
+            "SPLIT_40_60",
+            "SPLIT_HORIZONTAL",
+            "SPLIT_DIAGONAL"
+        ) && frames.size < 2
+    ) {
+        return ClipValidationResult.Invalid(
+            "Split layouts need at least 2 frames."
+        )
+    }
+
 
  return ClipValidationResult.Valid
   
