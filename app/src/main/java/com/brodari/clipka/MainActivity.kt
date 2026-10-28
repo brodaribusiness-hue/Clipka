@@ -88,6 +88,18 @@ private val splitTemplates = listOf(
     SplitTemplate(6, "Template 6", "Main view with two speaker inset frames")
 )
 
+private fun templateLayout(id: Int): String {
+    return when (id) {
+        1 -> "VERTICAL"
+        2 -> "HORIZONTAL"
+        3 -> "DIAGONAL"
+        4 -> "PIP"
+        5 -> "SIDE_BOTTOM"
+        6 -> "TOP_TWO_INSETS"
+        else -> "SINGLE"
+    }
+}
+
 private data class EditorSnapshot(
     val clips: List<ClipSegment>,
     val selectedClipId: String?,
@@ -520,12 +532,28 @@ private fun EditorScreen(
             selectedTemplate = selectedTemplate,
             
             onSelectTemplate = { template ->
-                selectedTemplate = template.id
-                showMessage(
-                    context,
-                    "${template.title}: ${template.description}"
-                )
+                val currentId = selectedClipId
+
+                if (currentId == null) {
+                    showMessage(context, "Select or add a clip first")
+                } else {
+                    saveUndoState()
+
+                    clips = clips.map { clip ->
+                        if (clip.id == currentId) {
+                            clip.copy(
+                                frameLayout = templateLayout(template.id)
+                            )
+                        } else {
+                            clip
+                        }
+                    }
+
+                    selectedTemplate = template.id
+                    showMessage(context, "${template.title} applied to selected clip")
+                }
             },
+
             onSelectRatio = { ratio ->
                 val currentId = selectedClipId
 
@@ -1290,7 +1318,7 @@ private fun PreviewScreen(
                 ToolButton(
                     label = template.title,
                     icon = Icons.Default.ViewQuilt,
-                    active = selectedTemplate == template.id,
+                    active = selectedClip?.frameLayout == templateLayout(template.id),
                     onClick = {
                         onSelectTemplate(template)
                     }
