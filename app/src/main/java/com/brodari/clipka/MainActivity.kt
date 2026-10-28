@@ -518,6 +518,7 @@ private fun EditorScreen(
                 it.id == selectedClipId
             },
             selectedTemplate = selectedTemplate,
+            
             onSelectTemplate = { template ->
                 selectedTemplate = template.id
                 showMessage(
@@ -525,6 +526,26 @@ private fun EditorScreen(
                     "${template.title}: ${template.description}"
                 )
             },
+            onSelectRatio = { ratio ->
+                val currentId = selectedClipId
+
+                if (currentId == null) {
+                    showMessage(context, "Select or add a clip first")
+                } else {
+                    saveUndoState()
+
+                    clips = clips.map { clip ->
+                        if (clip.id == currentId) {
+                            clip.copy(aspectRatio = ratio)
+                        } else {
+                            clip
+                        }
+                    }
+
+                    showMessage(context, "Aspect ratio set to $ratio")
+                }
+            },
+
             onAddClip = {
                 if (addClipFromRange()) {
                     toolMode = ToolMode.MAIN
@@ -1055,18 +1076,21 @@ private fun EditorScreen(
 }
 
 
+
 @Composable
 private fun PreviewScreen(
     fileName: String,
     videoUri: Uri?,
     player: ExoPlayer,
     playing: Boolean,
-        selectedClip: ClipSegment?,
+    selectedClip: ClipSegment?,
     selectedTemplate: Int,
     onSelectTemplate: (SplitTemplate) -> Unit,
+    onSelectRatio: (String) -> Unit,
     onAddClip: () -> Unit,
     onBack: () -> Unit
 ) {
+
     var positionMs by remember { mutableStateOf(0L) }
         val context = LocalContext.current
 
@@ -1235,14 +1259,12 @@ private fun PreviewScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            
             listOf("9:16", "1:1", "16:9").forEach { ratio ->
                 FilterChip(
-                    selected = false,
+                    selected = selectedClip?.aspectRatio == ratio,
                     onClick = {
-                        showMessage(
-                            context,
-                            "$ratio selected"
-                        )
+                        onSelectRatio(ratio)
                     },
                     label = {
                         Text(
@@ -1253,6 +1275,7 @@ private fun PreviewScreen(
                     modifier = Modifier.height(30.dp)
                 )
             }
+
         }
 
         Row(
