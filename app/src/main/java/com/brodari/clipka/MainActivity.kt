@@ -88,17 +88,19 @@ private val splitTemplates = listOf(
     SplitTemplate(6, "Template 6", "Main view with two speaker inset frames")
 )
 
+
 private fun templateLayout(id: Int): String {
     return when (id) {
-        1 -> "VERTICAL"
-        2 -> "HORIZONTAL"
-        3 -> "DIAGONAL"
-        4 -> "PIP"
-        5 -> "SIDE_BOTTOM"
-        6 -> "TOP_TWO_INSETS"
+        1 -> "SPLIT_VERTICAL"
+        2 -> "SPLIT_HORIZONTAL"
+        3 -> "SPLIT_DIAGONAL"
+        4 -> "CUSTOM"
+        5 -> "SPLIT_60_40"
+        6 -> "SPLIT_40_60"
         else -> "SINGLE"
     }
 }
+
 
 private data class EditorSnapshot(
     val clips: List<ClipSegment>,
