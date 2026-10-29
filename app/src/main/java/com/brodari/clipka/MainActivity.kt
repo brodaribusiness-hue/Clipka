@@ -1477,7 +1477,7 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
         )
     }
 }
-
+} 
 private fun parseTimeToMs(value: String): Long? {
     val parts = value.trim().split(":")
 
