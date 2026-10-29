@@ -698,6 +698,70 @@ private fun EditorScreen(
             }
         }
     }
+    
+    fun generateAutoClips() {
+        val durationMs = player.duration
+
+        if (videoUri == null || durationMs <= 0L) {
+            showMessage(context, "Wait for the video to load first")
+            return
+        }
+
+        val maxClipDurationMs = ClipSegment.MAX_CLIP_DURATION_MS
+        val clipCount = (
+            (durationMs + maxClipDurationMs - 1L) /
+                maxClipDurationMs
+            ).toInt().coerceAtLeast(1)
+
+        val baseDurationMs = durationMs / clipCount
+        val extraMs = durationMs % clipCount
+        val generatedClips = mutableListOf<ClipSegment>()
+        var cursorMs = 0L
+
+        repeat(clipCount) { index ->
+            val segmentDurationMs = baseDurationMs +
+                if (index < extraMs.toInt()) 1L else 0L
+            val endMs = cursorMs + segmentDurationMs
+
+            val clip = ClipSegment(
+                name = "Clip ${nextClipNumber + index}",
+                startMs = cursorMs,
+                endMs = endMs
+            )
+
+            when (val result = clip.validate()) {
+                is ClipValidationResult.Invalid -> {
+                    showMessage(context, result.reason)
+                    return
+                }
+
+                ClipValidationResult.Valid -> {
+                    generatedClips.add(clip)
+                }
+            }
+
+            cursorMs = endMs
+        }
+
+        if (generatedClips.isEmpty()) {
+            showMessage(context, "No clips could be generated")
+            return
+        }
+
+        saveUndoState()
+        clips = clips + generatedClips
+        selectedClipId = generatedClips.first().id
+        nextClipNumber += generatedClips.size
+        startTime = formatTime(generatedClips.first().startMs)
+        endTime = formatTime(generatedClips.first().endMs)
+        player.seekTo(generatedClips.first().startMs)
+
+        showMessage(
+            context,
+            "${generatedClips.size} clips generated"
+        )
+    }
+
 
 
     if (toolMode == ToolMode.PREVIEW) {
@@ -1206,13 +1270,13 @@ private fun EditorScreen(
                         }
                     )
 
+                    
                     ToolButton(
                         label = "Auto Clip",
                         icon = Icons.Default.AutoAwesome,
                         onClick = {
-                            showMessage(
-                                context,
-                                "Auto Clip will be implemented in Phase 2"
+                            generateAutoClips()
+
                             )
                         }
                     )
