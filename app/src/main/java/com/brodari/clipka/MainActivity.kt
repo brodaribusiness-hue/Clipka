@@ -14,6 +14,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1109,7 +1111,50 @@ private fun EditorScreen(
 
             if (toolMode == ToolMode.CROP && cropFrame != null) {
                 Canvas(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+    .fillMaxSize()
+    .pointerInput(toolMode, selectedClipId) {
+        detectDragGestures(
+            onDragStart = {
+                saveUndoState()
+            },
+            onDrag = { change, dragAmount ->
+                change.consume()
+
+                if (size.width <= 0 || size.height <= 0) {
+                    return@detectDragGestures
+                }
+
+                val dx = dragAmount.x / size.width.toFloat()
+                val dy = dragAmount.y / size.height.toFloat()
+
+                clips = clips.map { clip ->
+                    if (clip.id != selectedClipId) {
+                        clip
+                    } else {
+                        val frame = clip.frames.singleOrNull()
+                            ?: return@map clip
+
+                        val newX = (frame.x + dx)
+                            .coerceIn(0f, 1f - frame.width)
+                        val newY = (frame.y + dy)
+                            .coerceIn(0f, 1f - frame.height)
+
+                        clip.copy(
+                            frames = listOf(
+                                frame.copy(
+                                    x = newX,
+                                    y = newY,
+                                    name = "Crop"
+                                )
+                            ),
+                            frameLayout = "CUSTOM"
+                        )
+                    }
+                }
+            }
+        )
+    }
                 ) {
                     val left = cropFrame.x * size.width
                     val top = cropFrame.y * size.height
