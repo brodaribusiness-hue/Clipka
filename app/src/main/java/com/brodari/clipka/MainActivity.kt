@@ -38,6 +38,10 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import java.net.URLDecoder
 import kotlinx.coroutines.delay
+            currentProject = ClipProject(
+                name = fileName,
+                sourceVideoUri = uri.toString()
+            )
 
 private val AppBg = Color(0xFF101114)
 private val Panel = Color(0xFF1C1E23)
@@ -164,6 +168,17 @@ private fun ClipkaApp() {
     var videoUri by remember { mutableStateOf<Uri?>(null) }
     var fileName by remember { mutableStateOf("Untitled video") }
     var playing by remember { mutableStateOf(false) }
+        var currentProject by remember {
+        mutableStateOf<ClipProject?>(null)
+    }
+    var savedProjects by remember {
+        mutableStateOf<List<ClipProject>>(emptyList())
+    }
+
+    LaunchedEffect(Unit) {
+        savedProjects = ClipProjectStorage.loadAll(context)
+            .getOrElse { emptyList() }
+    }
 
     val player = remember {
         ExoPlayer.Builder(context).build()
@@ -233,17 +248,53 @@ private fun ClipkaApp() {
                 }
             )
 
-            Screen.PROJECTS -> ProjectsScreen(
+                        Screen.PROJECTS -> ProjectsScreen(
+                projects = savedProjects,
                 onBack = {
                     screen = Screen.HOME
                 },
                 onImport = {
                     picker.launch(arrayOf("video/*"))
+                },
+                onOpenProject = { project ->
+                    val source = project.sourceVideoUri
+
+                    if (source.isNullOrBlank()) {
+                        showMessage(context, "Project video URI is missing")
+                    } else {
+                        try {
+                            val uri = Uri.parse(source)
+
+                            videoUri = uri
+                            fileName = project.name
+                            currentProject = project
+
+                            player.setMediaItem(MediaItem.fromUri(uri))
+                            player.prepare()
+                            player.playWhenReady = false
+
+                            screen = Screen.EDITOR
+                        } catch (_: Exception) {
+                            showMessage(context, "Could not open this project")
+                        }
+                    }
                 }
             )
-
             Screen.EDITOR -> EditorScreen(
                 fileName = fileName,
+                                project = currentProject,
+                onSaveProject = { projectToSave ->
+                    ClipProjectStorage.save(context, projectToSave)
+                        .onSuccess {
+                            savedProjects = ClipProjectStorage.loadAll(context)
+                                .getOrElse { emptyList() }
+                            currentProject = projectToSave
+                            showMessage(context, "Project saved")
+                        }
+                        .onFailure {
+                            showMessage(context, "Project save failed")
+                        }
+                },
                 videoUri = videoUri,
                 player = player,
                 playing = playing,
@@ -350,8 +401,10 @@ private fun HomeScreen(
 
 @Composable
 private fun ProjectsScreen(
+    projects: List<ClipProject>,
     onBack: () -> Unit,
-    onImport: () -> Unit
+    onImport: () -> Unit,
+    onOpenProject: (ClipProject) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -380,33 +433,89 @@ private fun ProjectsScreen(
             )
         }
 
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.FolderOpen,
-                    contentDescription = null,
-                    tint = Muted,
-                    modifier = Modifier.size(52.dp)
-                )
+        if (projects.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.FolderOpen,
+                        contentDescription = null,
+                        tint = Muted,
+                        modifier = Modifier.size(52.dp)
+                    )
 
-                Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(12.dp))
 
-                Text("Your saved projects", color = MainText)
+                    Text("No saved projects yet", color = MainText)
 
-                Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(6.dp))
 
-                Text(
-                    "Project loading is not connected yet.",
-                    color = Muted,
-                    fontSize = 12.sp
-                )
+                    Text(
+                        "Open a video and tap Save Project.",
+                        color = Muted,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                projects.forEach { project ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Panel, RoundedCornerShape(12.dp))
+                            .clickable { onOpenProject(project) }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Movie,
+                            contentDescription = null,
+                            tint = Accent,
+                            modifier = Modifier.size(32.dp)
+                        )
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = project.name,
+                                color = MainText,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Spacer(Modifier.height(4.dp))
+
+                            Text(
+                                text = "${project.clips.size} clips",
+                                color = Muted,
+                                fontSize = 12.sp
+                            )
+                        }
+
+                        Icon(
+                            Icons.Default.ChevronRight,
+                            contentDescription = "Open project",
+                            tint = Muted
+                        )
+                    }
+                }
             }
         }
+
+        Spacer(Modifier.height(10.dp))
 
         Button(
             onClick = onImport,
@@ -422,10 +531,11 @@ private fun ProjectsScreen(
         }
     }
 }
-
 @Composable
 private fun EditorScreen(
     fileName: String,
+        project: ClipProject?,
+    onSaveProject: (ClipProject) -> Unit,
     videoUri: Uri?,
     player: ExoPlayer,
     playing: Boolean,
@@ -437,21 +547,42 @@ private fun EditorScreen(
 ) {
     val context = LocalContext.current
 
-    var stretch by remember { mutableStateOf(false) }
-    var startTime by remember { mutableStateOf("00:00") }
-    var endTime by remember { mutableStateOf("00:30") }
+        var stretch by remember { mutableStateOf(false) }
+
+    var startTime by remember(project?.id) {
+        mutableStateOf(
+            project?.clips?.firstOrNull()?.let {
+                formatTime(it.startMs)
+            } ?: "00:00"
+        )
+    }
+
+    var endTime by remember(project?.id) {
+        mutableStateOf(
+            project?.clips?.firstOrNull()?.let {
+                formatTime(it.endMs)
+            } ?: "00:30"
+        )
+    }
+
     var toolMode by remember { mutableStateOf(ToolMode.MAIN) }
     var autoFace by remember { mutableStateOf(false) }
     var selectedTemplate by remember { mutableIntStateOf(1) }
 
-    var clips by remember {
-        mutableStateOf<List<ClipSegment>>(emptyList())
+    var clips by remember(project?.id) {
+        mutableStateOf(project?.clips ?: emptyList())
     }
-    var selectedClipId by remember {
-        mutableStateOf<String?>(null)
+
+    var selectedClipId by remember(project?.id) {
+        mutableStateOf(
+            project?.selectedClipId
+                ?.takeIf { id -> project.clips.any { it.id == id } }
+                ?: project?.clips?.firstOrNull()?.id
+        )
     }
-    var nextClipNumber by remember {
-        mutableIntStateOf(1)
+
+    var nextClipNumber by remember(project?.id) {
+        mutableIntStateOf((project?.clips?.size ?: 0) + 1)
     }
     
 
@@ -670,6 +801,27 @@ private fun EditorScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+                        IconButton(
+                onClick = {
+                    val projectToSave = ClipProject(
+                        id = project?.id ?: ClipProject().id,
+                        name = project?.name ?: fileName,
+                        sourceVideoUri = videoUri?.toString(),
+                        sourceDurationMs = player.duration.coerceAtLeast(0L),
+                        clips = clips,
+                        selectedClipId = selectedClipId
+                    )
+
+                    onSaveProject(projectToSave)
+                },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    Icons.Default.Save,
+                    contentDescription = "Save Project",
+                    tint = Accent
+                )
+            }
 
             Button(
                 onClick = onExport,
