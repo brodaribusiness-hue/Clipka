@@ -11,6 +11,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1259,24 +1261,44 @@ private fun PreviewScreen(
             contentAlignment = Alignment.Center
         ) {
             if (videoUri != null) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { viewContext ->
-                        PlayerView(viewContext).apply {
-                            this.player = player
-                            useController = false
-                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        }
-                    },
-                    update = { view ->
-                        view.player = player
-                        view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    }
-                )
-            } else {
-                Text("Import a video first", color = Muted)
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { viewContext ->
+            PlayerView(viewContext).apply {
+                this.player = player
+                useController = false
+                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
             }
+        },
+        update = { view ->
+            view.player = player
+            view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
         }
+    )
+} else {
+    Text("Import a video first", color = Muted)
+}
+
+if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
+    Canvas(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        selectedClip.frames.forEachIndexed { index, frame ->
+            drawRect(
+                color = if (index == 0) Accent else Color.White,
+                topLeft = androidx.compose.ui.geometry.Offset(
+                    x = frame.x * size.width,
+                    y = frame.y * size.height
+                ),
+                size = androidx.compose.ui.geometry.Size(
+                    width = frame.width * size.width,
+                    height = frame.height * size.height
+                ),
+                style = Stroke(width = 3.dp.toPx())
+            )
+        }
+    }
+}
 
 
         Spacer(Modifier.height(8.dp))
