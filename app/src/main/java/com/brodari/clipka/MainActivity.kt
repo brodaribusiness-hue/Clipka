@@ -15,6 +15,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -38,11 +39,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import java.net.URLDecoder
 import kotlinx.coroutines.delay
-            currentProject = ClipProject(
-                name = fileName,
-                sourceVideoUri = uri.toString()
-            )
-
+           
 private val AppBg = Color(0xFF101114)
 private val Panel = Color(0xFF1C1E23)
 private val Accent = Color(0xFFB9F36B)
@@ -226,6 +223,11 @@ private fun ClipkaApp() {
                 }
                 ?.takeIf { it.isNotBlank() }
                 ?: "Imported video"
+
+                        currentProject = ClipProject(
+                name = fileName,
+                sourceVideoUri = uri.toString()
+            )
 
             player.setMediaItem(MediaItem.fromUri(uri))
             player.prepare()
