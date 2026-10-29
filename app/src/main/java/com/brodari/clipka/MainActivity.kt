@@ -77,7 +77,7 @@ private enum class Screen {
 }
 
 private enum class ToolMode {
-    MAIN, EDIT, PREVIEW
+    MAIN, EDIT, CROP, PREVIEW
 }
 
 private data class SplitTemplate(
@@ -1335,7 +1335,29 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(7.dp))
 
-      
+              fun applyCropFrame(frame: FrameRegion) {
+            val currentId = selectedClipId
+
+            if (currentId == null) {
+                showMessage(context, "Select a clip first")
+                return
+            }
+
+            saveUndoState()
+
+            clips = clips.map { clip ->
+                if (clip.id == currentId) {
+                    clip.copy(
+                        frameLayout = "CUSTOM",
+                        frames = listOf(frame.copy(name = "Crop"))
+                    )
+                } else {
+                    clip
+                }
+            }
+
+            showMessage(context, "Crop region updated")
+        }
         // Trim the selected timeline clip.
         fun trimSelectedClip() {
             val selected = clips.firstOrNull {
@@ -1464,14 +1486,35 @@ private fun EditorScreen(
                         }
                     )
 
-                    ToolButton(
+                                        ToolButton(
                         label = "Crop",
                         icon = Icons.Default.Crop,
                         onClick = {
-                            showMessage(
-                                context,
-                                "Crop editing will be implemented in Phase 2"
-                            )
+                            val selected = clips.firstOrNull {
+                                it.id == selectedClipId
+                            }
+
+                            if (selected == null) {
+                                showMessage(context, "Select a clip first")
+                            } else {
+                                val initialFrame =
+                                    if (selected.frames.size == 1) {
+                                        selected.frames.first().copy(
+                                            name = "Crop"
+                                        )
+                                    } else {
+                                        FrameRegion(
+                                            name = "Crop",
+                                            x = 0.1f,
+                                            y = 0.1f,
+                                            width = 0.8f,
+                                            height = 0.8f
+                                        )
+                                    }
+
+                                applyCropFrame(initialFrame)
+                                toolMode = ToolMode.CROP
+                            }
                         }
                     )
 
@@ -1504,6 +1547,111 @@ private fun EditorScreen(
                             showMessage(
                                 context,
                                 "Adjust controls will be implemented in Phase 2"
+                            )
+                        }
+                    )
+                }
+                                ToolMode.CROP -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = {
+                            toolMode = ToolMode.EDIT
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Center",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            applyCropFrame(
+                                FrameRegion(
+                                    name = "Crop",
+                                    x = 0.1f,
+                                    y = 0.1f,
+                                    width = 0.8f,
+                                    height = 0.8f
+                                )
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Left",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            applyCropFrame(
+                                FrameRegion(
+                                    name = "Crop",
+                                    x = 0f,
+                                    y = 0f,
+                                    width = 0.65f,
+                                    height = 1f
+                                )
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Right",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            applyCropFrame(
+                                FrameRegion(
+                                    name = "Crop",
+                                    x = 0.35f,
+                                    y = 0f,
+                                    width = 0.65f,
+                                    height = 1f
+                                )
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Top",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            applyCropFrame(
+                                FrameRegion(
+                                    name = "Crop",
+                                    x = 0f,
+                                    y = 0f,
+                                    width = 1f,
+                                    height = 0.65f
+                                )
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Bottom",
+                        icon = Icons.Default.Crop,
+                        onClick = {
+                            applyCropFrame(
+                                FrameRegion(
+                                    name = "Crop",
+                                    x = 0f,
+                                    y = 0.35f,
+                                    width = 1f,
+                                    height = 0.65f
+                                )
+                            )
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Reset",
+                        icon = Icons.Default.Fullscreen,
+                        onClick = {
+                            applyCropFrame(
+                                FrameRegion(
+                                    name = "Crop",
+                                    x = 0f,
+                                    y = 0f,
+                                    width = 1f,
+                                    height = 1f
+                                )
                             )
                         }
                     )
