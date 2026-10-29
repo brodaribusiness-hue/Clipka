@@ -779,7 +779,76 @@ private fun EditorScreen(
         }
     }
 
+    fun detectFacesForSelectedClip() {
+        val sourceUri = videoUri
+        val selected = clips.firstOrNull {
+            it.id == selectedClipId
+        }
 
+        if (sourceUri == null) {
+            showMessage(context, "Import a video first")
+            return
+        }
+
+        if (selected == null) {
+            showMessage(context, "Select or add a clip first")
+            return
+        }
+
+        coroutineScope.launch {
+            showMessage(context, "Detecting face on this device...")
+
+            val result = runCatching {
+                ClipkaFaceDetection.detectFaces(
+                    context.applicationContext,
+                    sourceUri,
+                    selected.startMs,
+                    selected.endMs,
+                    maxFaces = 1
+                )
+            }
+
+            result.onSuccess { detectedFrames ->
+                val faceFrame = detectedFrames.firstOrNull()
+
+                if (faceFrame == null) {
+                    autoFace = false
+                    showMessage(context, "No face detected in this clip")
+                    return@onSuccess
+                }
+
+                saveUndoState()
+
+                clips = clips.map { clip ->
+                    if (clip.id == selected.id) {
+                        clip.copy(
+                            frames = listOf(faceFrame),
+                            frameLayout = "CUSTOM"
+                        )
+                    } else {
+                        clip
+                    }
+                }
+
+                autoFace = true
+
+                showMessage(
+                    context,
+                    "Face crop applied to ${selected.name}"
+                )
+            }.onFailure { error ->
+                autoFace = false
+
+                showMessage(
+                    context,
+                    "Face detection failed: ${
+                        error.localizedMessage
+                            ?: "Unable to analyze this video"
+                    }"
+                )
+            }
+        }
+    }
 
 
     if (toolMode == ToolMode.PREVIEW) {
@@ -1300,21 +1369,13 @@ private fun EditorScreen(
 
 
                     ToolButton(
-                        label = if (autoFace) "Face ON" else "Face Detect",
-                        icon = Icons.Default.Face,
-                        active = autoFace,
-                        onClick = {
-                            autoFace = !autoFace
-                            showMessage(
-                                context,
-                                if (autoFace) {
-                                    "Face tracking will be connected in Phase 2"
-                                } else {
-                                    "Face detection disabled"
-                                }
-                            )
-                        }
-                    )
+    label = if (autoFace) "Face Applied" else "Face Detect",
+    icon = Icons.Default.Face,
+    active = autoFace,
+    onClick = {
+        detectFacesForSelectedClip()
+    }
+)
 
                     ToolButton(
                         label = "Preview",
