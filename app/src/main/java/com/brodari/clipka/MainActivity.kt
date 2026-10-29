@@ -1102,6 +1102,74 @@ private fun EditorScreen(
                     modifier = Modifier.size(50.dp)
                 )
             }
+                        val cropFrame = clips
+                .firstOrNull { it.id == selectedClipId }
+                ?.frames
+                ?.singleOrNull()
+
+            if (toolMode == ToolMode.CROP && cropFrame != null) {
+                Canvas(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    val left = cropFrame.x * size.width
+                    val top = cropFrame.y * size.height
+                    val right = (cropFrame.x + cropFrame.width) * size.width
+                    val bottom = (cropFrame.y + cropFrame.height) * size.height
+
+                    val shade = Color.Black.copy(alpha = 0.55f)
+
+                    // Darken the area above the crop frame.
+                    drawRect(
+                        color = shade,
+                        topLeft = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        size = androidx.compose.ui.geometry.Size(
+                            size.width,
+                            top
+                        )
+                    )
+
+                    // Darken the area below the crop frame.
+                    drawRect(
+                        color = shade,
+                        topLeft = androidx.compose.ui.geometry.Offset(0f, bottom),
+                        size = androidx.compose.ui.geometry.Size(
+                            size.width,
+                            (size.height - bottom).coerceAtLeast(0f)
+                        )
+                    )
+
+                    // Darken the left outside area.
+                    drawRect(
+                        color = shade,
+                        topLeft = androidx.compose.ui.geometry.Offset(0f, top),
+                        size = androidx.compose.ui.geometry.Size(
+                            left,
+                            (bottom - top).coerceAtLeast(0f)
+                        )
+                    )
+
+                    // Darken the right outside area.
+                    drawRect(
+                        color = shade,
+                        topLeft = androidx.compose.ui.geometry.Offset(right, top),
+                        size = androidx.compose.ui.geometry.Size(
+                            (size.width - right).coerceAtLeast(0f),
+                            (bottom - top).coerceAtLeast(0f)
+                        )
+                    )
+
+                    // Highlight the selected crop boundary.
+                    drawRect(
+                        color = Accent,
+                        topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                        size = androidx.compose.ui.geometry.Size(
+                            right - left,
+                            bottom - top
+                        ),
+                        style = Stroke(width = 3.dp.toPx())
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(7.dp))
