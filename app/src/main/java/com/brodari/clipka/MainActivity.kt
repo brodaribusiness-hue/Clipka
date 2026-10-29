@@ -2051,27 +2051,7 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
             }
         }
 
-                Spacer(Modifier.height(4.dp))
-
-        Button(
-            onClick = onAddClip,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(42.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Accent,
-                contentColor = Color(0xFF171914)
-            )
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = null
-            )
-            Spacer(Modifier.width(6.dp))
-            Text("Add Clip", fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(Modifier.height(4.dp))
+                
 
         Row(
             modifier = Modifier
