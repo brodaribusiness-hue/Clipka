@@ -320,8 +320,36 @@ private fun ClipkaApp() {
                 onRedo = {
                     showMessage(context, "Redo integration is not connected yet")
                 },
-                onExport = {
-                    showMessage(context, "Export integration is not connected yet")
+                                onExport = { clipsToExport ->
+                    val sourceUri = videoUri
+
+                    if (sourceUri == null) {
+                        showMessage(context, "Import a video first")
+                    } else if (clipsToExport.isEmpty()) {
+                        showMessage(context, "Add clips before exporting")
+                    } else {
+                        BatchZipExporter(
+                            context = context,
+                            sourceUri = sourceUri,
+                            clips = clipsToExport,
+                            onProgress = { message ->
+                                showMessage(context, message)
+                            },
+                            onComplete = { zipFile ->
+                                if (zipFile == null) {
+                                    showMessage(
+                                        context,
+                                        "Export failed. Check clip settings."
+                                    )
+                                } else {
+                                    pendingZipFile = zipFile
+                                    saveZipPicker.launch(
+                                        "Clipka_Clips.zip"
+                                    )
+                                }
+                            }
+                        ).start()
+                    }
                 }
             )
         }
@@ -548,7 +576,7 @@ private fun EditorScreen(
     onPlayPause: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
-    onExport: () -> Unit
+        onExport: (List<ClipSegment>) -> Unit
 ) {
     val context = LocalContext.current
            val coroutineScope = rememberCoroutineScope()
@@ -977,7 +1005,9 @@ private fun EditorScreen(
             }
 
             Button(
-                onClick = onExport,
+                onClick = {
+    onExport(clips)
+},
                 contentPadding = PaddingValues(
                     horizontal = 12.dp,
                     vertical = 5.dp
