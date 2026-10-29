@@ -38,6 +38,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import java.net.URLDecoder
+import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -173,6 +174,44 @@ private fun ClipkaApp() {
     }
     var savedProjects by remember {
         mutableStateOf<List<ClipProject>>(emptyList())
+    }
+        var pendingZipFile by remember {
+        mutableStateOf<File?>(null)
+    }
+
+    val saveZipPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { destinationUri ->
+        val zipFile = pendingZipFile
+        pendingZipFile = null
+
+        if (destinationUri == null) {
+            zipFile?.delete()
+            showMessage(context, "Export cancelled")
+        } else if (zipFile == null || !zipFile.exists()) {
+            showMessage(context, "Export file is missing")
+        } else {
+            runCatching {
+                val output = context.contentResolver
+                    .openOutputStream(destinationUri)
+                    ?: error("Could not open destination")
+
+                output.use { stream ->
+                    zipFile.inputStream().use { input ->
+                        input.copyTo(stream)
+                    }
+                }
+            }.onSuccess {
+                showMessage(context, "ZIP exported successfully")
+            }.onFailure { error ->
+                showMessage(
+                    context,
+                    "Save failed: ${error.localizedMessage ?: "Unknown error"}"
+                )
+            }
+
+            zipFile.delete()
+        }
     }
 
     LaunchedEffect(Unit) {
