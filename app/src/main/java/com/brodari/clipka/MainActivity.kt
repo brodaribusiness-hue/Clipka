@@ -975,11 +975,7 @@ private fun EditorScreen(
                 }
             },
 
-            onAddClip = {
-                if (addClipFromRange()) {
-                    toolMode = ToolMode.MAIN
-                }
-            },
+            
             onBack = {
                 toolMode = ToolMode.MAIN
             }
@@ -1264,6 +1260,32 @@ private fun EditorScreen(
                     else Icons.Default.PlayArrow,
                     contentDescription = "Play/Pause",
                     modifier = Modifier.size(26.dp)
+                )
+            }
+                        Button(
+                onClick = {
+                    addClipFromRange()
+                },
+                modifier = Modifier
+                    .weight(1.2f)
+                    .fillMaxHeight(),
+                contentPadding = PaddingValues(horizontal = 4.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Accent,
+                    contentColor = Color(0xFF171914)
+                )
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(17.dp)
+                )
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    "Add Clip",
+                    fontSize = 11.sp,
+                    maxLines = 1
                 )
             }
             
@@ -1790,7 +1812,6 @@ private fun PreviewScreen(
     selectedTemplate: Int,
     onSelectTemplate: (SplitTemplate) -> Unit,
     onSelectRatio: (String) -> Unit,
-    onAddClip: () -> Unit,
     onBack: () -> Unit
 ) {
 
