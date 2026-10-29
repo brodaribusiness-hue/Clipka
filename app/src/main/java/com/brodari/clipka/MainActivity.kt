@@ -643,7 +643,18 @@ private fun EditorScreen(
     var toolMode by remember { mutableStateOf(ToolMode.MAIN) }
     var autoFace by remember { mutableStateOf(false) }
     var selectedTemplate by remember { mutableIntStateOf(1) }
+    
+    var sourcePositionMs by remember {
+        mutableLongStateOf(0L)
+    }
 
+    LaunchedEffect(player, playing, videoUri) {
+        while (true) {
+            sourcePositionMs =
+                player.currentPosition.coerceAtLeast(0L)
+            delay(100L)
+        }
+    }
     var clips by remember(project?.id) {
         mutableStateOf(project?.clips ?: emptyList())
     }
@@ -1215,41 +1226,60 @@ private fun EditorScreen(
 
         Spacer(Modifier.height(7.dp))
 
-        // Playback controls
+                // Playback controls
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(42.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
+            Button(
+                onClick = { addClipFromRange() },
+                modifier = Modifier
+                    .width(82.dp)
+                    .height(34.dp),
+                contentPadding = PaddingValues(horizontal = 4.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Accent,
+                    contentColor = Color(0xFF171914)
+                )
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(Modifier.width(2.dp))
+                Text("Add Clip", fontSize = 10.sp, maxLines = 1)
+            }
+
             OutlinedButton(
                 onClick = { stretch = !stretch },
                 modifier = Modifier
-                    .weight(1.35f)
-                    .fillMaxHeight(),
-                contentPadding = PaddingValues(horizontal = 4.dp),
-                shape = RoundedCornerShape(10.dp)
+                    .weight(1f)
+                    .height(34.dp),
+                contentPadding = PaddingValues(horizontal = 3.dp),
+                shape = RoundedCornerShape(8.dp)
             ) {
                 Icon(
                     if (stretch) Icons.Default.FullscreenExit
                     else Icons.Default.Fullscreen,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-
-                Spacer(Modifier.width(3.dp))
-
+                Spacer(Modifier.width(2.dp))
                 Text(
                     if (stretch) "Fit" else "Stretch",
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     maxLines = 1
                 )
             }
 
             FilledIconButton(
                 onClick = onPlayPause,
-                modifier = Modifier.size(43.dp),
+                modifier = Modifier.size(36.dp),
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = Accent,
                     contentColor = Color(0xFF171914)
@@ -1259,39 +1289,13 @@ private fun EditorScreen(
                     if (playing) Icons.Default.Pause
                     else Icons.Default.PlayArrow,
                     contentDescription = "Play/Pause",
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
-                        Button(
-                onClick = {
-                    addClipFromRange()
-                },
-                modifier = Modifier
-                    .weight(1.2f)
-                    .fillMaxHeight(),
-                contentPadding = PaddingValues(horizontal = 4.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Accent,
-                    contentColor = Color(0xFF171914)
-                )
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(17.dp)
-                )
-                Spacer(Modifier.width(3.dp))
-                Text(
-                    "Add Clip",
-                    fontSize = 11.sp,
-                    maxLines = 1
-                )
-            }
-            
-                IconButton(
-    onClick = { undoEdit() },
-                modifier = Modifier.size(38.dp)
+
+            IconButton(
+                onClick = { undoEdit() },
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     Icons.Default.Undo,
@@ -1301,8 +1305,8 @@ private fun EditorScreen(
             }
 
             IconButton(
-    onClick = { redoEdit() },
-                modifier = Modifier.size(38.dp)
+                onClick = { redoEdit() },
+                modifier = Modifier.size(32.dp)
             ) {
                 Icon(
                     Icons.Default.Redo,
@@ -1335,6 +1339,104 @@ private fun EditorScreen(
                 onValueChange = { endTime = it },
                 modifier = Modifier.weight(1f)
             )
+        }
+                // Full imported source video timeline (separate from clip cards)
+        val sourceDurationMs = player.duration.coerceAtLeast(1L)
+        val safePositionMs = sourcePositionMs.coerceIn(
+            0L,
+            sourceDurationMs
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Panel, RoundedCornerShape(8.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "ORIGINAL VIDEO",
+                    color = Muted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(Modifier.weight(1f))
+
+                Text(
+                    "${formatTime(safePositionMs)} / " +
+                        formatTime(sourceDurationMs),
+                    color = Accent,
+                    fontSize = 10.sp
+                )
+            }
+
+            Slider(
+                value = safePositionMs.toFloat(),
+                onValueChange = { value ->
+                    sourcePositionMs = value.toLong()
+                },
+                onValueChangeFinished = {
+                    player.seekTo(
+                        sourcePositionMs.coerceIn(
+                            0L,
+                            sourceDurationMs
+                        )
+                    )
+                },
+                valueRange = 0f..sourceDurationMs.toFloat(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(28.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = Accent,
+                    activeTrackColor = Accent,
+                    inactiveTrackColor = Color(0xFF44464D)
+                )
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        startTime = formatTime(safePositionMs)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(30.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp),
+                    shape = RoundedCornerShape(7.dp)
+                ) {
+                    Text(
+                        "Set Start  ${formatTime(safePositionMs)}",
+                        fontSize = 9.sp,
+                        maxLines = 1
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        endTime = formatTime(safePositionMs)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(30.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp),
+                    shape = RoundedCornerShape(7.dp)
+                ) {
+                    Text(
+                        "Set End  ${formatTime(safePositionMs)}",
+                        fontSize = 9.sp,
+                        maxLines = 1
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(5.dp))
@@ -1993,48 +2095,38 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
                 inactiveTrackColor = Color(0xFF44464D)
             )
         )
-                // Split-screen templates toolbar
+                        // Preview templates and aspect ratios at the bottom
         Text(
             text = "SPLIT-SCREEN TEMPLATES",
             color = Muted,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(
-                top = 6.dp,
-                bottom = 4.dp
-            )
+            modifier = Modifier.padding(top = 3.dp, bottom = 2.dp)
         )
-                // Compact aspect ratio selector
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(34.dp),
+                .height(30.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            
             listOf("9:16", "1:1", "16:9").forEach { ratio ->
                 FilterChip(
                     selected = selectedClip?.aspectRatio == ratio,
-                    onClick = {
-                        onSelectRatio(ratio)
-                    },
+                    onClick = { onSelectRatio(ratio) },
                     label = {
-                        Text(
-                            ratio,
-                            fontSize = 10.sp
-                        )
+                        Text(ratio, fontSize = 10.sp)
                     },
-                    modifier = Modifier.height(30.dp)
+                    modifier = Modifier.height(28.dp)
                 )
             }
-
         }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(54.dp)
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -2043,15 +2135,14 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
                 ToolButton(
                     label = template.title,
                     icon = Icons.Default.ViewQuilt,
-                    active = selectedClip?.frameLayout == templateLayout(template.id),
+                    active = selectedClip?.frameLayout ==
+                        templateLayout(template.id),
                     onClick = {
                         onSelectTemplate(template)
                     }
                 )
             }
         }
-
-                
 
         Row(
             modifier = Modifier
