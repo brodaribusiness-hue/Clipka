@@ -1271,15 +1271,15 @@ private fun EditorScreen(
                     )
 
                     
+                    
                     ToolButton(
                         label = "Auto Clip",
                         icon = Icons.Default.AutoAwesome,
                         onClick = {
                             generateAutoClips()
-
-                            )
                         }
                     )
+
 
                     ToolButton(
                         label = if (autoFace) "Face ON" else "Face Detect",
