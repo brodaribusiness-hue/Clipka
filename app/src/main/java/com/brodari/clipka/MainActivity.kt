@@ -39,6 +39,9 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import java.net.URLDecoder
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
            
 private val AppBg = Color(0xFF101114)
 private val Panel = Color(0xFF1C1E23)
@@ -548,6 +551,7 @@ private fun EditorScreen(
     onExport: () -> Unit
 ) {
     val context = LocalContext.current
+           val coroutineScope = rememberCoroutineScope()
 
         var stretch by remember { mutableStateOf(false) }
 
@@ -699,68 +703,82 @@ private fun EditorScreen(
         }
     }
     
+    
     fun generateAutoClips() {
         val durationMs = player.duration
+        val sourceUri = videoUri
 
-        if (videoUri == null || durationMs <= 0L) {
+        if (sourceUri == null || durationMs <= 0L) {
             showMessage(context, "Wait for the video to load first")
             return
         }
 
-        val maxClipDurationMs = ClipSegment.MAX_CLIP_DURATION_MS
-        val clipCount = (
-            (durationMs + maxClipDurationMs - 1L) /
-                maxClipDurationMs
-            ).toInt().coerceAtLeast(1)
-
-        val baseDurationMs = durationMs / clipCount
-        val extraMs = durationMs % clipCount
-        val generatedClips = mutableListOf<ClipSegment>()
-        var cursorMs = 0L
-
-        repeat(clipCount) { index ->
-            val segmentDurationMs = baseDurationMs +
-                if (index < extraMs.toInt()) 1L else 0L
-            val endMs = cursorMs + segmentDurationMs
-
-            val clip = ClipSegment(
-                name = "Clip ${nextClipNumber + index}",
-                startMs = cursorMs,
-                endMs = endMs
+        coroutineScope.launch {
+            showMessage(
+                context,
+                "Analyzing video scenes on this device..."
             )
 
-            when (val result = clip.validate()) {
-                is ClipValidationResult.Invalid -> {
-                    showMessage(context, result.reason)
-                    return
-                }
-
-                ClipValidationResult.Valid -> {
-                    generatedClips.add(clip)
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    AutoClipAnalyzer.detectSegments(
+                        context.applicationContext,
+                        sourceUri,
+                        durationMs
+                    )
                 }
             }
 
-            cursorMs = endMs
+            result.onSuccess { ranges ->
+                if (ranges.isEmpty()) {
+                    showMessage(context, "No clips could be generated")
+                    return@onSuccess
+                }
+
+                val generatedClips = ranges.mapIndexed {
+                        index, range ->
+                    ClipSegment(
+                        name = "Clip ${nextClipNumber + index}",
+                        startMs = range.first,
+                        endMs = range.second
+                    )
+                }
+
+                val invalidClip = generatedClips.firstOrNull {
+                    it.validate() is ClipValidationResult.Invalid
+                }
+
+                if (invalidClip != null) {
+                    showMessage(
+                        context,
+                        "A generated clip failed validation"
+                    )
+                    return@onSuccess
+                }
+
+                saveUndoState()
+                clips = clips + generatedClips
+                selectedClipId = generatedClips.first().id
+                nextClipNumber += generatedClips.size
+                startTime = formatTime(generatedClips.first().startMs)
+                endTime = formatTime(generatedClips.first().endMs)
+                player.seekTo(generatedClips.first().startMs)
+
+                showMessage(
+                    context,
+                    "${generatedClips.size} scene-based clips generated"
+                )
+            }.onFailure { error ->
+                showMessage(
+                    context,
+                    "Scene analysis failed: ${
+                        error.localizedMessage ?: "Unable to read video"
+                    }"
+                )
+            }
         }
-
-        if (generatedClips.isEmpty()) {
-            showMessage(context, "No clips could be generated")
-            return
-        }
-
-        saveUndoState()
-        clips = clips + generatedClips
-        selectedClipId = generatedClips.first().id
-        nextClipNumber += generatedClips.size
-        startTime = formatTime(generatedClips.first().startMs)
-        endTime = formatTime(generatedClips.first().endMs)
-        player.seekTo(generatedClips.first().startMs)
-
-        showMessage(
-            context,
-            "${generatedClips.size} clips generated"
-        )
     }
+
 
 
 
