@@ -96,8 +96,51 @@ private fun templateLayout(id: Int): String {
         3 -> "SPLIT_DIAGONAL"
         4 -> "CUSTOM"
         5 -> "SPLIT_60_40"
-        6 -> "SPLIT_40_60"
+        6 -> "CUSTOM"
         else -> "SINGLE"
+    }
+}
+
+private fun templateFrames(id: Int): List<FrameRegion> {
+    return when (id) {
+        // Speaker 1 top, speaker 2 bottom
+        1 -> listOf(
+            FrameRegion(name = "Speaker 1", x = 0f, y = 0f, width = 1f, height = 0.5f),
+            FrameRegion(name = "Speaker 2", x = 0f, y = 0.5f, width = 1f, height = 0.5f)
+        )
+
+        // Speaker 1 left, speaker 2 right
+        2 -> listOf(
+            FrameRegion(name = "Speaker 1", x = 0f, y = 0f, width = 0.5f, height = 1f),
+            FrameRegion(name = "Speaker 2", x = 0.5f, y = 0f, width = 0.5f, height = 1f)
+        )
+
+        // Two frame regions for the future diagonal layout
+        3 -> listOf(
+            FrameRegion(name = "Speaker 1", x = 0f, y = 0f, width = 0.6f, height = 1f),
+            FrameRegion(name = "Speaker 2", x = 0.4f, y = 0f, width = 0.6f, height = 1f)
+        )
+
+        // Main view plus picture-in-picture inset
+        4 -> listOf(
+            FrameRegion(name = "Main speaker", x = 0f, y = 0f, width = 1f, height = 1f),
+            FrameRegion(name = "Inset speaker", x = 0.62f, y = 0.06f, width = 0.32f, height = 0.28f)
+        )
+
+        // 60:40 top/bottom split
+        5 -> listOf(
+            FrameRegion(name = "Main speaker", x = 0f, y = 0f, width = 1f, height = 0.6f),
+            FrameRegion(name = "Second speaker", x = 0f, y = 0.6f, width = 1f, height = 0.4f)
+        )
+
+        // Main view plus two inset frames
+        6 -> listOf(
+            FrameRegion(name = "Main view", x = 0f, y = 0f, width = 1f, height = 1f),
+            FrameRegion(name = "Inset 1", x = 0.04f, y = 0.06f, width = 0.28f, height = 0.25f),
+            FrameRegion(name = "Inset 2", x = 0.68f, y = 0.06f, width = 0.28f, height = 0.25f)
+        )
+
+        else -> emptyList()
     }
 }
 
@@ -544,8 +587,9 @@ private fun EditorScreen(
                     clips = clips.map { clip ->
                         if (clip.id == currentId) {
                             clip.copy(
-                                frameLayout = templateLayout(template.id)
-                            )
+    frameLayout = templateLayout(template.id),
+    frames = templateFrames(template.id)
+)
                         } else {
                             clip
                         }
