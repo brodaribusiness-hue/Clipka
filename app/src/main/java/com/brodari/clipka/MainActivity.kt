@@ -110,48 +110,79 @@ private fun templateLayout(id: Int): String {
     }
 }
 
+
 private fun templateFrames(id: Int): List<FrameRegion> {
+    fun frame(
+        name: String,
+        outputX: Float,
+        outputY: Float,
+        outputWidth: Float,
+        outputHeight: Float
+    ) = FrameRegion(
+        name = name,
+        x = 0.20f,
+        y = 0.10f,
+        width = 0.60f,
+        height = 0.80f,
+        outputX = outputX,
+        outputY = outputY,
+        outputWidth = outputWidth,
+        outputHeight = outputHeight
+    )
+
     return when (id) {
-        // Speaker 1 top, speaker 2 bottom
         1 -> listOf(
-            FrameRegion(name = "Speaker 1", x = 0f, y = 0f, width = 1f, height = 0.5f),
-            FrameRegion(name = "Speaker 2", x = 0f, y = 0.5f, width = 1f, height = 0.5f)
+            frame("Speaker 1", 0f, 0f, 1f, 0.5f),
+            frame("Speaker 2", 0f, 0.5f, 1f, 0.5f)
         )
-
-        // Speaker 1 left, speaker 2 right
         2 -> listOf(
-            FrameRegion(name = "Speaker 1", x = 0f, y = 0f, width = 0.5f, height = 1f),
-            FrameRegion(name = "Speaker 2", x = 0.5f, y = 0f, width = 0.5f, height = 1f)
+            frame("Speaker 1", 0f, 0f, 0.5f, 1f),
+            frame("Speaker 2", 0.5f, 0f, 0.5f, 1f)
         )
-
-        // Two frame regions for the future diagonal layout
         3 -> listOf(
-            FrameRegion(name = "Speaker 1", x = 0f, y = 0f, width = 0.6f, height = 1f),
-            FrameRegion(name = "Speaker 2", x = 0.4f, y = 0f, width = 0.6f, height = 1f)
+            frame("Speaker 1", 0f, 0f, 0.62f, 1f),
+            frame("Speaker 2", 0.38f, 0f, 0.62f, 1f)
         )
-
-        // Main view plus picture-in-picture inset
         4 -> listOf(
-            FrameRegion(name = "Main speaker", x = 0f, y = 0f, width = 1f, height = 1f),
-            FrameRegion(name = "Inset speaker", x = 0.62f, y = 0.06f, width = 0.32f, height = 0.28f)
+            frame("Main speaker", 0f, 0f, 1f, 1f),
+            frame("Inset speaker", 0.62f, 0.06f, 0.32f, 0.28f)
         )
-
-        // 60:40 top/bottom split
         5 -> listOf(
-            FrameRegion(name = "Main speaker", x = 0f, y = 0f, width = 1f, height = 0.6f),
-            FrameRegion(name = "Second speaker", x = 0f, y = 0.6f, width = 1f, height = 0.4f)
+            frame("Main speaker", 0f, 0f, 1f, 0.6f),
+            frame("Second speaker", 0f, 0.6f, 1f, 0.4f)
         )
-
-        // Main view plus two inset frames
         6 -> listOf(
-            FrameRegion(name = "Main view", x = 0f, y = 0f, width = 1f, height = 1f),
-            FrameRegion(name = "Inset 1", x = 0.04f, y = 0.06f, width = 0.28f, height = 0.25f),
-            FrameRegion(name = "Inset 2", x = 0.68f, y = 0.06f, width = 0.28f, height = 0.25f)
+            frame("Main view", 0f, 0f, 1f, 1f),
+            frame("Inset 1", 0.04f, 0.06f, 0.28f, 0.25f),
+            frame("Inset 2", 0.68f, 0.06f, 0.28f, 0.25f)
         )
-
         else -> emptyList()
     }
 }
+
+private fun applyTemplateToFrames(
+    templateId: Int,
+    existingFrames: List<FrameRegion>
+): List<FrameRegion> {
+    val placements = templateFrames(templateId)
+
+    return placements.mapIndexed { index, placement ->
+        val existing = existingFrames.getOrNull(index)
+
+        if (existing == null) {
+            placement
+        } else {
+            existing.copy(
+                name = placement.name,
+                outputX = placement.outputX,
+                outputY = placement.outputY,
+                outputWidth = placement.outputWidth,
+                outputHeight = placement.outputHeight
+            )
+        }
+    }
+}
+
 
 
 private data class EditorSnapshot(
