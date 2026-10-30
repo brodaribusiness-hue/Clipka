@@ -1041,25 +1041,16 @@ private fun EditorScreen(
     }
 
 
-
     if (toolMode == ToolMode.PREVIEW) {
         PreviewScreen(
             fileName = fileName,
             videoUri = videoUri,
             player = player,
             playing = playing,
-                        selectedClip = clips.firstOrNull {
-                it.id == selectedClipId
-            },
-                   
             selectedClip = clips.firstOrNull {
                 it.id == selectedClipId
             },
             selectedTemplate = selectedTemplate,
-
-            onSelectTemplate = { template ->
-
-            
             onSelectTemplate = { template ->
                 if (template.id == 3) {
                     showMessage(
@@ -1102,13 +1093,14 @@ private fun EditorScreen(
                     }
                 }
             },
-
-
             onSelectRatio = { ratio ->
                 val currentId = selectedClipId
 
                 if (currentId == null) {
-                    showMessage(context, "Select or add a clip first")
+                    showMessage(
+                        context,
+                        "Select or add a clip first"
+                    )
                 } else {
                     saveUndoState()
 
@@ -1120,19 +1112,18 @@ private fun EditorScreen(
                         }
                     }
 
-                    showMessage(context, "Aspect ratio set to $ratio")
+                    showMessage(
+                        context,
+                        "Aspect ratio set to $ratio"
+                    )
                 }
             },
-
-            
             onBack = {
                 toolMode = ToolMode.MAIN
             }
-               
         )
         return
     }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1500,49 +1491,58 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
     }
 }
 
-        cropFrames.forEach { frame ->
-            val left = frame.outputX * size.width
-            val top = frame.outputY * size.height
-            val right =
-                (frame.outputX + frame.outputWidth) * size.width
-            val bottom =
-                (frame.outputY + frame.outputHeight) * size.height
+                    if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
+                Canvas(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    cropFrames.forEach { frame ->
+                        val left = frame.outputX * size.width
+                        val top = frame.outputY * size.height
+                        val right =
+                            (frame.outputX + frame.outputWidth) * size.width
+                        val bottom =
+                            (frame.outputY + frame.outputHeight) * size.height
 
-            val isSelected = frame.id == activeFrame.id
+                        val isSelected = frame.id == activeFrame.id
 
-            drawRect(
-                color = if (isSelected) Accent else Color.White,
-                topLeft = androidx.compose.ui.geometry.Offset(
-                    left,
-                    top
-                ),
-                size = androidx.compose.ui.geometry.Size(
-                    right - left,
-                    bottom - top
-                ),
-                style = Stroke(
-                    width = if (isSelected) 4.dp.toPx() else 2.dp.toPx()
-                )
-            )
+                        drawRect(
+                            color = if (isSelected) Accent else Color.White,
+                            topLeft = androidx.compose.ui.geometry.Offset(
+                                left,
+                                top
+                            ),
+                            size = androidx.compose.ui.geometry.Size(
+                                right - left,
+                                bottom - top
+                            ),
+                            style = Stroke(
+                                width = if (isSelected) {
+                                    4.dp.toPx()
+                                } else {
+                                    2.dp.toPx()
+                                }
+                            )
+                        )
 
-            if (isSelected) {
-                val handleSize = 16.dp.toPx()
+                        if (isSelected) {
+                            val handleSize = 16.dp.toPx()
 
-                drawRect(
-                    color = Accent,
-                    topLeft = androidx.compose.ui.geometry.Offset(
-                        right - handleSize / 2f,
-                        bottom - handleSize / 2f
-                    ),
-                    size = androidx.compose.ui.geometry.Size(
-                        handleSize,
-                        handleSize
-                    )
-                )
+                            drawRect(
+                                color = Accent,
+                                topLeft = androidx.compose.ui.geometry.Offset(
+                                    right - handleSize / 2f,
+                                    bottom - handleSize / 2f
+                                ),
+                                size = androidx.compose.ui.geometry.Size(
+                                    handleSize,
+                                    handleSize
+                                )
+                            )
+                        }
+                    }
+                }
             }
         }
-    }
-}
 
         Spacer(Modifier.height(7.dp))
 
@@ -2546,14 +2546,13 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
         }
 }
 
-                ToolMode.PREVIEW -> {
+                                ToolMode.PREVIEW -> {
                     // PreviewScreen is displayed by the early return above.
                 }
             }
         }
     }
 }
-} 
 
 @Composable
 private fun PreviewScreen(
