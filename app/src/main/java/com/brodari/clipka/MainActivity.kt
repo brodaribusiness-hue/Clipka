@@ -2379,7 +2379,7 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
         }
     }
 )
-                } 
+
 
                                         ToolButton(
                         label = "Adjust",
@@ -2394,7 +2394,7 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
                             }
                         }
                     )
-            } 
+                
                                 ToolMode.ADJUST -> {
                     val selected = clips.firstOrNull {
                         it.id == selectedClipId
@@ -2894,7 +2894,7 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
         }
     }
 }
-} 
+
 
 
 @Composable
