@@ -745,7 +745,7 @@ private fun EditorScreen(
         redoStack.clear()
     }
 
-    fun undoEdit() {
+        fun undoEdit() {
         if (undoStack.isEmpty()) {
             showMessage(context, "Nothing to undo")
             return
@@ -760,11 +760,15 @@ private fun EditorScreen(
         clips = previous.clips
         selectedClipId = previous.selectedClipId
         selectedFrameId = previous.selectedFrameId
-                nextClipNumber = previous.nextClipNumber
+        nextClipNumber = previous.nextClipNumber
         startTime = previous.startTime
         endTime = previous.endTime
         selectedTemplate = previous.selectedTemplate
-    }    
+
+        parseTimeToMs(startTime)?.let { restoredPosition ->
+            player.seekTo(restoredPosition)
+        }
+    }
 
     fun redoEdit() {
         if (redoStack.isEmpty()) {
@@ -781,10 +785,14 @@ private fun EditorScreen(
         clips = next.clips
         selectedClipId = next.selectedClipId
         selectedFrameId = next.selectedFrameId
-                nextClipNumber = next.nextClipNumber
+        nextClipNumber = next.nextClipNumber
         startTime = next.startTime
         endTime = next.endTime
         selectedTemplate = next.selectedTemplate
+
+        parseTimeToMs(startTime)?.let { restoredPosition ->
+            player.seekTo(restoredPosition)
+        }
     }
 
     
