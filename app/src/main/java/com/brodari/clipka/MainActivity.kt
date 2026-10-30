@@ -1199,19 +1199,43 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
             .pointerInput(
                 toolMode,
                 selectedClipId,
-                selectedFrameId
+                selectedFrameId,
+                activeFrame.x,
+                activeFrame.y,
+                activeFrame.width,
+                activeFrame.height
             ) {
                 var dragX = 0f
                 var dragY = 0f
                 var initialX = 0f
                 var initialY = 0f
+                var initialWidth = 0f
+                var initialHeight = 0f
+                var resizeMode = false
 
                 detectDragGestures(
-                    onDragStart = {
+                    onDragStart = { offset ->
                         dragX = 0f
                         dragY = 0f
+
                         initialX = activeFrame.x
                         initialY = activeFrame.y
+                        initialWidth = activeFrame.width
+                        initialHeight = activeFrame.height
+
+                        val cornerX =
+                            (activeFrame.x + activeFrame.width) * size.width
+                        val cornerY =
+                            (activeFrame.y + activeFrame.height) * size.height
+
+                        val dx = offset.x - cornerX
+                        val dy = offset.y - cornerY
+                        val handleRadius = 44.dp.toPx()
+
+                        resizeMode =
+                            dx * dx + dy * dy <=
+                                handleRadius * handleRadius
+
                         saveUndoState()
                     },
                     onDrag = { change, dragAmount ->
@@ -1224,25 +1248,40 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                         dragX += dragAmount.x / size.width.toFloat()
                         dragY += dragAmount.y / size.height.toFloat()
 
-                        val newX = (initialX + dragX)
-                            .coerceIn(0f, 1f - activeFrame.width)
-
-                        val newY = (initialY + dragY)
-                            .coerceIn(0f, 1f - activeFrame.height)
-
                         clips = clips.map { clip ->
                             if (clip.id != selectedClipId) {
                                 clip
                             } else {
                                 clip.copy(
                                     frames = clip.frames.map { frame ->
-                                        if (frame.id == activeFrame.id) {
+                                        if (frame.id != activeFrame.id) {
+                                            frame
+                                        } else if (resizeMode) {
                                             frame.copy(
-                                                x = newX,
-                                                y = newY
+                                                width = (initialWidth + dragX)
+                                                    .coerceIn(
+                                                        0.12f,
+                                                        1f - activeFrame.x
+                                                    ),
+                                                height = (initialHeight + dragY)
+                                                    .coerceIn(
+                                                        0.12f,
+                                                        1f - activeFrame.y
+                                                    )
                                             )
                                         } else {
-                                            frame
+                                            frame.copy(
+                                                x = (initialX + dragX)
+                                                    .coerceIn(
+                                                        0f,
+                                                        1f - activeFrame.width
+                                                    ),
+                                                y = (initialY + dragY)
+                                                    .coerceIn(
+                                                        0f,
+                                                        1f - activeFrame.height
+                                                    )
+                                            )
                                         }
                                     },
                                     frameLayout = "CUSTOM"
@@ -1272,6 +1311,22 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                     width = if (isSelected) 4.dp.toPx() else 2.dp.toPx()
                 )
             )
+
+            if (isSelected) {
+                val handleSize = 16.dp.toPx()
+
+                drawRect(
+                    color = Accent,
+                    topLeft = androidx.compose.ui.geometry.Offset(
+                        right - handleSize / 2f,
+                        bottom - handleSize / 2f
+                    ),
+                    size = androidx.compose.ui.geometry.Size(
+                        handleSize,
+                        handleSize
+                    )
+                )
+            }
         }
     }
 }
@@ -1684,6 +1739,60 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
     selectedFrameId = updatedFrame.id
     showMessage(context, "Selected speaker crop updated")
               }
+                      fun addSpeakerFrame() {
+            val selected = clips.firstOrNull {
+                it.id == selectedClipId
+            }
+
+            if (selected == null) {
+                showMessage(context, "Select a clip first")
+                return
+            }
+
+            if (selected.frames.size >= 6) {
+                showMessage(context, "Maximum 6 speaker frames allowed")
+                return
+            }
+
+            saveUndoState()
+
+            val totalCount = selected.frames.size + 1
+            val slotHeight = 1f / totalCount.toFloat()
+
+            val newFrame = FrameRegion(
+                name = "Speaker $totalCount",
+                x = 0.20f,
+                y = 0.10f,
+                width = 0.60f,
+                height = 0.80f
+            )
+
+            val updatedFrames = (selected.frames + newFrame)
+                .mapIndexed { index, frame ->
+                    frame.copy(
+                        outputX = 0f,
+                        outputY = index * slotHeight,
+                        outputWidth = 1f,
+                        outputHeight = slotHeight
+                    )
+                }
+
+            clips = clips.map { clip ->
+                if (clip.id == selected.id) {
+                    clip.copy(
+                        frames = updatedFrames,
+                        frameLayout = "CUSTOM"
+                    )
+                } else {
+                    clip
+                }
+            }
+
+            selectedFrameId = newFrame.id
+            showMessage(context, "${newFrame.name} added")
+        }
+
+              
         // Trim the selected timeline clip.
         fun trimSelectedClip() {
             val selected = clips.firstOrNull {
@@ -1884,6 +1993,13 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                         }
                     
                    )
+                                        ToolButton(
+                        label = "Add Frame",
+                        icon = Icons.Default.Add,
+                        onClick = {
+                            addSpeakerFrame()
+                        }
+                    )
                                         clips.firstOrNull { it.id == selectedClipId }
                         ?.frames
                         ?.forEach { frame ->
