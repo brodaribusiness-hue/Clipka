@@ -1972,7 +1972,7 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
         }
     }
 }
-
+} 
 
 
 @Composable
