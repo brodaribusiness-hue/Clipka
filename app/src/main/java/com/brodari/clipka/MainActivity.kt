@@ -1404,60 +1404,192 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
 }
 
                 
+if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(
+                toolMode,
+                selectedClipId,
+                selectedFrameId
+            ) {
+                var initialFrame: FrameRegion? = null
+                var dragX = 0f
+                var dragY = 0f
+                var resizeMode = false
 
-                    if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
-                Canvas(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    cropFrames.forEach { frame ->
-                        val left = frame.outputX * size.width
-                        val top = frame.outputY * size.height
-                        val right =
-                            (frame.outputX + frame.outputWidth) * size.width
-                        val bottom =
-                            (frame.outputY + frame.outputHeight) * size.height
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        val currentFrames = latestClips
+                            .firstOrNull { it.id == selectedClipId }
+                            ?.frames
+                            ?: emptyList()
 
-                        val isSelected = frame.id == activeFrame.id
+                        val pointX = offset.x / size.width
+                        val pointY = offset.y / size.height
 
-                        drawRect(
-                            color = if (isSelected) Accent else Color.White,
-                            topLeft = androidx.compose.ui.geometry.Offset(
-                                left,
-                                top
-                            ),
-                            size = androidx.compose.ui.geometry.Size(
-                                right - left,
-                                bottom - top
-                            ),
-                            style = Stroke(
-                                width = if (isSelected) {
-                                    4.dp.toPx()
-                                } else {
-                                    2.dp.toPx()
-                                }
-                            )
-                        )
+                        val hitFrame = currentFrames
+                            .asReversed()
+                            .firstOrNull { frame ->
+                                pointX >= frame.outputX &&
+                                pointX <= frame.outputX + frame.outputWidth &&
+                                pointY >= frame.outputY &&
+                                pointY <= frame.outputY + frame.outputHeight
+                            }
 
-                        if (isSelected) {
-                            val handleSize = 16.dp.toPx()
-
-                            drawRect(
-                                color = Accent,
-                                topLeft = androidx.compose.ui.geometry.Offset(
-                                    right - handleSize / 2f,
-                                    bottom - handleSize / 2f
-                                ),
-                                size = androidx.compose.ui.geometry.Size(
-                                    handleSize,
-                                    handleSize
-                                )
-                            )
+                        if (hitFrame == null) {
+                            initialFrame = null
+                            return@detectDragGestures
                         }
+
+                        initialFrame = hitFrame
+                        selectedFrameId = hitFrame.id
+
+                        dragX = 0f
+                        dragY = 0f
+
+                        val cornerX =
+                            (hitFrame.outputX + hitFrame.outputWidth) *
+                                size.width
+
+                        val cornerY =
+                            (hitFrame.outputY + hitFrame.outputHeight) *
+                                size.height
+
+                        val dx = offset.x - cornerX
+                        val dy = offset.y - cornerY
+                        val handleRadius = 44.dp.toPx()
+
+                        resizeMode =
+                            dx * dx + dy * dy <=
+                                handleRadius * handleRadius
+
+                        saveUndoState()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+
+                        val startFrame = initialFrame
+                            ?: return@detectDragGestures
+
+                        if (size.width <= 0 || size.height <= 0) {
+                            return@detectDragGestures
+                        }
+
+                        dragX += dragAmount.x / size.width.toFloat()
+                        dragY += dragAmount.y / size.height.toFloat()
+
+                        clips = latestClips.map { clip ->
+                            if (clip.id != selectedClipId) {
+                                clip
+                            } else {
+                                clip.copy(
+                                    frames = clip.frames.map { frame ->
+                                        if (frame.id != startFrame.id) {
+                                            frame
+                                        } else if (resizeMode) {
+                                            val availableWidth =
+                                                (1f - startFrame.outputX)
+                                                    .coerceAtLeast(0.001f)
+
+                                            val availableHeight =
+                                                (1f - startFrame.outputY)
+                                                    .coerceAtLeast(0.001f)
+
+                                            frame.copy(
+                                                outputWidth = (
+                                                    startFrame.outputWidth +
+                                                        dragX
+                                                ).coerceIn(
+                                                    minOf(0.08f, availableWidth),
+                                                    availableWidth
+                                                ),
+                                                outputHeight = (
+                                                    startFrame.outputHeight +
+                                                        dragY
+                                                ).coerceIn(
+                                                    minOf(0.08f, availableHeight),
+                                                    availableHeight
+                                                )
+                                            )
+                                        } else {
+                                            frame.copy(
+                                                outputX = (
+                                                    startFrame.outputX + dragX
+                                                ).coerceIn(
+                                                    0f,
+                                                    1f - startFrame.outputWidth
+                                                ),
+                                                outputY = (
+                                                    startFrame.outputY + dragY
+                                                ).coerceIn(
+                                                    0f,
+                                                    1f - startFrame.outputHeight
+                                                )
+                                            )
+                                        }
+                                    },
+                                    frameLayout = "CUSTOM"
+                                )
+                            }
+                        }
+                    },
+                    onDragEnd = {
+                        initialFrame = null
+                    },
+                    onDragCancel = {
+                        initialFrame = null
                     }
-                }
+                )
+            }
+    ) {
+        cropFrames.forEach { frame ->
+            val left = frame.outputX * size.width
+            val top = frame.outputY * size.height
+            val right =
+                (frame.outputX + frame.outputWidth) * size.width
+            val bottom =
+                (frame.outputY + frame.outputHeight) * size.height
+
+            val isSelected = frame.id == activeFrame.id
+
+            drawRect(
+                color = if (isSelected) Accent else Color.White,
+                topLeft = androidx.compose.ui.geometry.Offset(
+                    left,
+                    top
+                ),
+                size = androidx.compose.ui.geometry.Size(
+                    right - left,
+                    bottom - top
+                ),
+                style = Stroke(
+                    width = if (isSelected) {
+                        4.dp.toPx()
+                    } else {
+                        2.dp.toPx()
+                    }
+                )
+            )
+
+            if (isSelected) {
+                val handleSize = 16.dp.toPx()
+
+                drawRect(
+                    color = Accent,
+                    topLeft = androidx.compose.ui.geometry.Offset(
+                        right - handleSize / 2f,
+                        bottom - handleSize / 2f
+                    ),
+                    size = androidx.compose.ui.geometry.Size(
+                        handleSize,
+                        handleSize
+                    )
+                )
             }
         }
-
+    }
+}
         Spacer(Modifier.height(7.dp))
 
                 // Playback controls
