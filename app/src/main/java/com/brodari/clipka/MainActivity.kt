@@ -79,7 +79,7 @@ private enum class Screen {
 }
 
 private enum class ToolMode {
-    MAIN, EDIT, CROP, OUTPUT, PREVIEW
+    MAIN, EDIT, CROP, ZOOM, OUTPUT, PREVIEW
 }
 
 private data class SplitTemplate(
@@ -1267,7 +1267,10 @@ val activeFrame = cropFrames.firstOrNull {
 val latestClips by rememberUpdatedState(clips)
 val latestActiveFrame by rememberUpdatedState(activeFrame)
 
-if (toolMode == ToolMode.CROP && activeFrame != null) {
+if (
+    toolMode in setOf(ToolMode.CROP, ToolMode.ZOOM) &&
+    activeFrame != null
+)  {
     Canvas(
         modifier = Modifier
             .fillMaxSize()
@@ -2346,15 +2349,36 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
 )
 
                     ToolButton(
-                        label = "Zoom",
-                        icon = Icons.Default.ZoomIn,
-                        onClick = {
-                            showMessage(
-                                context,
-                                "Zoom editing will be implemented in Phase 2"
-                            )
-                        }
+    label = "Zoom",
+    icon = Icons.Default.ZoomIn,
+    onClick = {
+        val selected = clips.firstOrNull {
+            it.id == selectedClipId
+        }
+
+        if (selected == null) {
+            showMessage(context, "Select a clip first")
+        } else {
+            if (selected.frames.isEmpty()) {
+                applyCropFrame(
+                    FrameRegion(
+                        name = "Speaker 1",
+                        x = 0f,
+                        y = 0f,
+                        width = 1f,
+                        height = 1f
                     )
+                )
+            } else {
+                selectedFrameId = selected.frames
+                    .firstOrNull { it.id == selectedFrameId }
+                    ?.id ?: selected.frames.first().id
+            }
+
+            toolMode = ToolMode.ZOOM
+        }
+    }
+)
 
                     ToolButton(
                         label = "Adjust",
@@ -2492,6 +2516,112 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
                         }
                     )
                 }
+                                ToolMode.ZOOM -> {
+    ToolButton(
+        label = "Back",
+        icon = Icons.Default.ArrowBack,
+        onClick = {
+            toolMode = ToolMode.EDIT
+        }
+    )
+
+    clips.firstOrNull {
+        it.id == selectedClipId
+    }?.frames?.forEach { frame ->
+        ToolButton(
+            label = frame.name,
+            icon = Icons.Default.Face,
+            active = frame.id == selectedFrameId,
+            onClick = {
+                selectedFrameId = frame.id
+            }
+        )
+    }
+
+    ToolButton(
+        label = "Zoom In",
+        icon = Icons.Default.ZoomIn,
+        onClick = {
+            val frame = clips
+                .firstOrNull { it.id == selectedClipId }
+                ?.frames
+                ?.firstOrNull { it.id == selectedFrameId }
+
+            if (frame != null) {
+                val newWidth = (frame.width * 0.8f)
+                    .coerceAtLeast(0.08f)
+                val newHeight = (frame.height * 0.8f)
+                    .coerceAtLeast(0.08f)
+
+                applyCropFrame(
+                    frame.copy(
+                        x = (
+                            frame.x + (frame.width - newWidth) / 2f
+                        ).coerceIn(0f, 1f - newWidth),
+                        y = (
+                            frame.y + (frame.height - newHeight) / 2f
+                        ).coerceIn(0f, 1f - newHeight),
+                        width = newWidth,
+                        height = newHeight
+                    )
+                )
+            }
+        }
+    )
+
+    ToolButton(
+        label = "Zoom Out",
+        icon = Icons.Default.ZoomOut,
+        onClick = {
+            val frame = clips
+                .firstOrNull { it.id == selectedClipId }
+                ?.frames
+                ?.firstOrNull { it.id == selectedFrameId }
+
+            if (frame != null) {
+                val newWidth = (frame.width * 1.25f)
+                    .coerceAtMost(1f)
+                val newHeight = (frame.height * 1.25f)
+                    .coerceAtMost(1f)
+
+                applyCropFrame(
+                    frame.copy(
+                        x = (
+                            frame.x + (frame.width - newWidth) / 2f
+                        ).coerceIn(0f, 1f - newWidth),
+                        y = (
+                            frame.y + (frame.height - newHeight) / 2f
+                        ).coerceIn(0f, 1f - newHeight),
+                        width = newWidth,
+                        height = newHeight
+                    )
+                )
+            }
+        }
+    )
+
+    ToolButton(
+        label = "Reset",
+        icon = Icons.Default.Fullscreen,
+        onClick = {
+            val frame = clips
+                .firstOrNull { it.id == selectedClipId }
+                ?.frames
+                ?.firstOrNull { it.id == selectedFrameId }
+
+            if (frame != null) {
+                applyCropFrame(
+                    frame.copy(
+                        x = 0f,
+                        y = 0f,
+                        width = 1f,
+                        height = 1f
+                    )
+                )
+            }
+        }
+    )
+}
                                 
                 ToolMode.OUTPUT -> {
                     ToolButton(
