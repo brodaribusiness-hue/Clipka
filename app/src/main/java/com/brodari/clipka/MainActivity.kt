@@ -1408,10 +1408,9 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
     Canvas(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(
+                        .pointerInput(
                 toolMode,
-                selectedClipId,
-                selectedFrameId
+                selectedClipId
             ) {
                 var initialFrame: FrameRegion? = null
                 var dragX = 0f
