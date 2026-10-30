@@ -5,6 +5,9 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Crop
 import androidx.media3.effect.Presentation
+import androidx.media3.effect.Brightness
+import androidx.media3.effect.Contrast
+import androidx.media3.effect.HslAdjustment
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.EditedMediaItemSequence
@@ -65,7 +68,15 @@ object ClipkaCompositionFactory {
         clip: ClipSegment
     ): EditedMediaItem {
         val targetRatio = aspectRatio(clip.aspectRatio)
-        val effects = mutableListOf<Effect>()
+        val effects = mutableListOf<Effect>
+                    effects.add(Brightness(clip.brightness))
+        effects.add(Contrast(clip.contrast))
+        effects.add(
+            HslAdjustment.Builder()
+                .adjustSaturation(clip.saturation)
+                .build()
+        )
+        
 
         val frame = clip.frames.firstOrNull()
         if (frame != null) {
@@ -103,9 +114,16 @@ object ClipkaCompositionFactory {
             val videoItem = EditedMediaItem.Builder(mediaItem)
                 .setRemoveAudio(true)
                 .setEffects(
-                    Effects(
+                                        Effects(
                         emptyList(),
-                        listOf(createCrop(frame))
+                        listOf(
+                            Brightness(clip.brightness),
+                            Contrast(clip.contrast),
+                            HslAdjustment.Builder()
+                                .adjustSaturation(clip.saturation)
+                                .build(),
+                            createCrop(frame)
+                        )
                     )
                 )
                 .build()
