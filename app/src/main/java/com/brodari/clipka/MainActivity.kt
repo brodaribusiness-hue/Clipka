@@ -937,18 +937,47 @@ private fun EditorScreen(
                     return@onSuccess
                 }
 
-                saveUndoState()
+                                saveUndoState()
+
+                val existingFrames = selected.frames
+
+                val targetFrame = existingFrames.firstOrNull {
+                    it.id == selectedFrameId
+                } ?: existingFrames.firstOrNull()
+
+                val updatedFrame = targetFrame?.copy(
+                    x = faceFrame.x,
+                    y = faceFrame.y,
+                    width = faceFrame.width,
+                    height = faceFrame.height,
+                    detectedFace = faceFrame.detectedFace,
+                    detectionConfidence = faceFrame.detectionConfidence
+                ) ?: faceFrame
 
                 clips = clips.map { clip ->
-                    if (clip.id == selected.id) {
+                    if (clip.id != selected.id) {
+                        clip
+                    } else {
+                        val updatedFrames = if (targetFrame != null) {
+                            clip.frames.map { frame ->
+                                if (frame.id == targetFrame.id) {
+                                    updatedFrame
+                                } else {
+                                    frame
+                                }
+                            }
+                        } else {
+                            clip.frames + updatedFrame
+                        }
+
                         clip.copy(
-                            frames = listOf(faceFrame),
+                            frames = updatedFrames,
                             frameLayout = "CUSTOM"
                         )
-                    } else {
-                        clip
                     }
                 }
+
+                selectedFrameId = updatedFrame.id
 
                 autoFace = true
 
