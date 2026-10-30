@@ -2585,6 +2585,8 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
         }
     }
 }
+} 
+
 
 @Composable
 private fun PreviewScreen(
