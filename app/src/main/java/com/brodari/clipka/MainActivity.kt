@@ -2394,6 +2394,7 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
                             }
                         }
                     )
+                }                   
                 
                                 ToolMode.ADJUST -> {
                     val selected = clips.firstOrNull {
@@ -2894,7 +2895,7 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
         }
     }
 }
-
+} 
 
 
 @Composable
