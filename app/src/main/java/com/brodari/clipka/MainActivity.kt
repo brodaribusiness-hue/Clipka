@@ -1251,6 +1251,10 @@ val activeFrame = cropFrames.firstOrNull {
     it.id == selectedFrameId
 } ?: cropFrames.firstOrNull()
 
+// Keep the gesture alive while frame coordinates change.
+val latestClips by rememberUpdatedState(clips)
+val latestActiveFrame by rememberUpdatedState(activeFrame)
+
 if (toolMode == ToolMode.CROP && activeFrame != null) {
     Canvas(
         modifier = Modifier
@@ -1258,34 +1262,27 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
             .pointerInput(
                 toolMode,
                 selectedClipId,
-                selectedFrameId,
-                activeFrame.x,
-                activeFrame.y,
-                activeFrame.width,
-                activeFrame.height
+                selectedFrameId
             ) {
                 var dragX = 0f
                 var dragY = 0f
-                var initialX = 0f
-                var initialY = 0f
-                var initialWidth = 0f
-                var initialHeight = 0f
+                var initialFrame: FrameRegion? = null
                 var resizeMode = false
 
                 detectDragGestures(
                     onDragStart = { offset ->
+                        val frame = latestActiveFrame
+                            ?: return@detectDragGestures
+
+                        initialFrame = frame
                         dragX = 0f
                         dragY = 0f
 
-                        initialX = activeFrame.x
-                        initialY = activeFrame.y
-                        initialWidth = activeFrame.width
-                        initialHeight = activeFrame.height
-
                         val cornerX =
-                            (activeFrame.x + activeFrame.width) * size.width
+                            (frame.x + frame.width) * size.width
+
                         val cornerY =
-                            (activeFrame.y + activeFrame.height) * size.height
+                            (frame.y + frame.height) * size.height
 
                         val dx = offset.x - cornerX
                         val dy = offset.y - cornerY
@@ -1300,6 +1297,9 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                     onDrag = { change, dragAmount ->
                         change.consume()
 
+                        val startFrame = initialFrame
+                            ?: return@detectDragGestures
+
                         if (size.width <= 0 || size.height <= 0) {
                             return@detectDragGestures
                         }
@@ -1307,39 +1307,45 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                         dragX += dragAmount.x / size.width.toFloat()
                         dragY += dragAmount.y / size.height.toFloat()
 
-                        clips = clips.map { clip ->
+                        clips = latestClips.map { clip ->
                             if (clip.id != selectedClipId) {
                                 clip
                             } else {
                                 clip.copy(
                                     frames = clip.frames.map { frame ->
-                                        if (frame.id != activeFrame.id) {
+                                        if (frame.id != startFrame.id) {
                                             frame
                                         } else if (resizeMode) {
                                             frame.copy(
-                                                width = (initialWidth + dragX)
-                                                    .coerceIn(
-                                                        0.12f,
-                                                        1f - activeFrame.x
-                                                    ),
-                                                height = (initialHeight + dragY)
-                                                    .coerceIn(
-                                                        0.12f,
-                                                        1f - activeFrame.y
-                                                    )
+                                                width = (
+                                                    startFrame.width + dragX
+                                                ).coerceIn(
+                                                    0.12f,
+                                                    (1f - startFrame.x)
+                                                        .coerceAtLeast(0.12f)
+                                                ),
+                                                height = (
+                                                    startFrame.height + dragY
+                                                ).coerceIn(
+                                                    0.12f,
+                                                    (1f - startFrame.y)
+                                                        .coerceAtLeast(0.12f)
+                                                )
                                             )
                                         } else {
                                             frame.copy(
-                                                x = (initialX + dragX)
-                                                    .coerceIn(
-                                                        0f,
-                                                        1f - activeFrame.width
-                                                    ),
-                                                y = (initialY + dragY)
-                                                    .coerceIn(
-                                                        0f,
-                                                        1f - activeFrame.height
-                                                    )
+                                                x = (
+                                                    startFrame.x + dragX
+                                                ).coerceIn(
+                                                    0f,
+                                                    1f - startFrame.width
+                                                ),
+                                                y = (
+                                                    startFrame.y + dragY
+                                                ).coerceIn(
+                                                    0f,
+                                                    1f - startFrame.height
+                                                )
                                             )
                                         }
                                     },
@@ -1361,13 +1367,20 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
 
             drawRect(
                 color = if (isSelected) Accent else Color.White,
-                topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                topLeft = androidx.compose.ui.geometry.Offset(
+                    left,
+                    top
+                ),
                 size = androidx.compose.ui.geometry.Size(
                     right - left,
                     bottom - top
                 ),
                 style = Stroke(
-                    width = if (isSelected) 4.dp.toPx() else 2.dp.toPx()
+                    width = if (isSelected) {
+                        4.dp.toPx()
+                    } else {
+                        2.dp.toPx()
+                    }
                 )
             )
 
