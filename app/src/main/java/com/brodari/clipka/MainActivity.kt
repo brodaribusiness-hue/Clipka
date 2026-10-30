@@ -731,8 +731,10 @@ private fun EditorScreen(
         selectedFrameId = selectedFrameId,
                 nextClipNumber = nextClipNumber,
         startTime = startTime,
+                startTime = startTime,
         endTime = endTime,
         selectedTemplate = selectedTemplate
+    )
 
     fun saveUndoState() {
         undoStack.add(currentSnapshot())
