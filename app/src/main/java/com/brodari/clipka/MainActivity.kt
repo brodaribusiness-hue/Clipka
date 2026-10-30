@@ -1596,28 +1596,65 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
         Spacer(Modifier.height(7.dp))
 
               fun applyCropFrame(frame: FrameRegion) {
-            val currentId = selectedClipId
+    val currentId = selectedClipId
 
-            if (currentId == null) {
-                showMessage(context, "Select a clip first")
-                return
-            }
+    if (currentId == null) {
+        showMessage(context, "Select a clip first")
+        return
+    }
 
-            saveUndoState()
+    val selectedClip = clips.firstOrNull {
+        it.id == currentId
+    }
 
-            clips = clips.map { clip ->
-                if (clip.id == currentId) {
-                    clip.copy(
-                        frameLayout = "CUSTOM",
-                        frames = listOf(frame.copy(name = "Crop"))
-                    )
-                } else {
-                    clip
+    if (selectedClip == null) {
+        showMessage(context, "Selected clip not found")
+        return
+    }
+
+    saveUndoState()
+
+    val existingFrame = selectedClip.frames.firstOrNull {
+        it.id == selectedFrameId
+    } ?: selectedClip.frames.firstOrNull()
+
+    val updatedFrame = if (existingFrame != null) {
+        existingFrame.copy(
+            x = frame.x,
+            y = frame.y,
+            width = frame.width,
+            height = frame.height
+        )
+    } else {
+        frame
+    }
+
+    clips = clips.map { clip ->
+        if (clip.id != currentId) {
+            clip
+        } else {
+            val updatedFrames = if (existingFrame != null) {
+                clip.frames.map { currentFrame ->
+                    if (currentFrame.id == existingFrame.id) {
+                        updatedFrame
+                    } else {
+                        currentFrame
+                    }
                 }
+            } else {
+                clip.frames + updatedFrame
             }
 
-            showMessage(context, "Crop region updated")
+            clip.copy(
+                frameLayout = "CUSTOM",
+                frames = updatedFrames
+            )
         }
+    }
+
+    selectedFrameId = updatedFrame.id
+    showMessage(context, "Selected speaker crop updated")
+              }
         // Trim the selected timeline clip.
         fun trimSelectedClip() {
             val selected = clips.firstOrNull {
@@ -1751,33 +1788,46 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                         icon = Icons.Default.Crop,
                         onClick = {
                             val selected = clips.firstOrNull {
-                                it.id == selectedClipId
-                            }
+                                onClick = {
+    val selected = clips.firstOrNull {
+        it.id == selectedClipId
+clips.firstOrNull { it.id == selectedClipId }
+    ?.frames
+    ?.forEachIndexed { index, frame ->
+        ToolButton(
+            label = frame.name,
+            icon = Icons.Default.Face,
+            active = frame.id == selectedFrameId,
+            onClick = {
+                selectedFrameId = frame.id
+            }
+        )
+    }
 
-                            if (selected == null) {
-                                showMessage(context, "Select a clip first")
-                            } else {
-                                val initialFrame =
-                                    if (selected.frames.size == 1) {
-                                        selected.frames.first().copy(
-                                            name = "Crop"
-                                        )
-                                    } else {
-                                        FrameRegion(
-                                            name = "Crop",
-                                            x = 0.1f,
-                                            y = 0.1f,
-                                            width = 0.8f,
-                                            height = 0.8f
-                                        )
-                                    }
+    }
 
-                                applyCropFrame(initialFrame)
-                                toolMode = ToolMode.CROP
-                            }
-                        }
-                    )
+    if (selected == null) {
+        showMessage(context, "Select a clip first")
+    } else {
+        if (selected.frames.isEmpty()) {
+            val initialFrame = FrameRegion(
+                name = "Speaker 1",
+                x = 0.1f,
+                y = 0.1f,
+                width = 0.8f,
+                height = 0.8f
+            )
 
+            applyCropFrame(initialFrame)
+            selectedFrameId = initialFrame.id
+        } else {
+            selectedFrameId = selected.frames.first().id
+        }
+
+        toolMode = ToolMode.CROP
+    }
+}
+) 
                     ToolButton(
                         label = "Resize",
                         icon = Icons.Default.AspectRatio,
