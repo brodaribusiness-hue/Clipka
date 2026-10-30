@@ -1,3 +1,4 @@
+
 package com.brodari.clipka
 
 import androidx.media3.common.OverlaySettings
@@ -7,14 +8,13 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.StaticOverlaySettings
 
 /**
- * Applies the final output placement of each independently cropped
- * speaker frame.
+ * Applies independent output placement to every speaker frame.
  *
- * FrameRegion.x/y/width/height describe the source crop.
- * FrameRegion.outputX/outputY/outputWidth/outputHeight describe
- * the destination rectangle in the final composition.
+ * Source crop:
+ * x, y, width, height
  *
- * Both Preview and Export must use this same settings class.
+ * Final output placement:
+ * outputX, outputY, outputWidth, outputHeight
  */
 @UnstableApi
 class SplitScreenCompositorSettings(
@@ -29,7 +29,9 @@ class SplitScreenCompositorSettings(
             else -> Size(1080, 1920)
         }
 
-    override fun getOutputSize(inputSizes: List<Size>): Size {
+    override fun getOutputSize(
+        inputSizes: List<Size>
+    ): Size {
         return outputSize
     }
 
@@ -41,13 +43,22 @@ class SplitScreenCompositorSettings(
             ?: frames.firstOrNull()
             ?: FrameRegion()
 
-        val left = frame.outputX.coerceIn(0f, 1f)
-        val top = frame.outputY.coerceIn(0f, 1f)
-        val width = frame.outputWidth.coerceIn(0.01f, 1f - left)
-        val height = frame.outputHeight.coerceIn(0.01f, 1f - top)
+        val left = frame.outputX.coerceIn(0f, 0.999f)
+        val top = frame.outputY.coerceIn(0f, 0.999f)
 
-        // Media3 anchors are expressed in normalized coordinates
-        // from -1 to +1, with the screen center at 0,0.
+        val availableWidth = (1f - left).coerceAtLeast(0.001f)
+        val availableHeight = (1f - top).coerceAtLeast(0.001f)
+
+        val width = frame.outputWidth.coerceIn(
+            0.001f,
+            availableWidth
+        )
+
+        val height = frame.outputHeight.coerceIn(
+            0.001f,
+            availableHeight
+        )
+
         val centerX = (2f * left) + width - 1f
         val centerY = 1f - (2f * top) - height
 
