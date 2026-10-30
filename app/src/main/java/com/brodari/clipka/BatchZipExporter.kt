@@ -196,11 +196,16 @@ if (
 
             activeTransformer = transformer
 
-            when (clip.frameLayout) {
-                "SPLIT_VERTICAL",
-                "SPLIT_60_40",
-                "SPLIT_40_60",
-                "SPLIT_HORIZONTAL" -> {
+                        when {
+                clip.frameLayout in setOf(
+                    "SPLIT_VERTICAL",
+                    "SPLIT_60_40",
+                    "SPLIT_40_60",
+                    "SPLIT_HORIZONTAL"
+                ) || (
+                    clip.frameLayout == "CUSTOM" &&
+                    clip.frames.size > 1
+                ) -> {
                     exportSplitClip(
                         transformer = transformer,
                         mediaItem = mediaItem,
@@ -219,6 +224,7 @@ if (
                         targetRatio = targetRatio
                     )
                 }
+            }
             }
         } catch (error: Exception) {
             onProgress(
@@ -270,7 +276,7 @@ if (
         )
     }
 
-    private fun exportSplitClip(
+        private fun exportSplitClip(
         transformer: Transformer,
         mediaItem: MediaItem,
         clip: ClipSegment,
@@ -279,53 +285,37 @@ if (
     ) {
         if (clip.frames.size < 2) {
             throw IllegalArgumentException(
-                "Split-screen export needs two frame regions."
+                "Split-screen export needs at least two frame regions."
             )
         }
 
-        val firstFrame = clip.frames[0]
-        val secondFrame = clip.frames[1]
+        val videoSequences = clip.frames.map { frame ->
+            val videoItem = createVideoItem(
+                mediaItem,
+                frame
+            )
 
-        val firstVideoItem = createVideoItem(
-            mediaItem,
-            firstFrame
+            EditedMediaItemSequence(
+                listOf(videoItem)
+            )
+        }
+
+        val audioItem = EditedMediaItem.Builder(mediaItem)
+            .setRemoveVideo(true)
+            .build()
+
+        val audioSequence = EditedMediaItemSequence(
+            listOf(audioItem)
         )
 
-        val secondVideoItem = createVideoItem(
-            mediaItem,
-            secondFrame
-        )
+        val allSequences = videoSequences + audioSequence
 
-        // Video-only sequences keep each speaker in a separate layer.
-        val firstVideoSequence =
-    EditedMediaItemSequence(
-        listOf(firstVideoItem)
-    )
-
-val secondVideoSequence =
-    EditedMediaItemSequence(
-        listOf(secondVideoItem)
-    )
-
-val audioItem = EditedMediaItem.Builder(mediaItem)
-    .setRemoveVideo(true)
-    .build()
-
-val audioSequence =
-    EditedMediaItemSequence(
-        listOf(audioItem)
-    )
-
-        val composition = Composition.Builder(
-            firstVideoSequence,
-            secondVideoSequence,
-            audioSequence
-        )
+        val composition = Composition.Builder(allSequences)
             .setVideoCompositorSettings(
                 SplitScreenCompositorSettings(
-    frames = clip.frames,
-    aspectRatio = clip.aspectRatio
-)
+                    frames = clip.frames,
+                    aspectRatio = clip.aspectRatio
+                )
             )
             .build()
 
