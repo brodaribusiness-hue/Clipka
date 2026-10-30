@@ -185,14 +185,15 @@ private fun applyTemplateToFrames(
 
 
 
+
 private data class EditorSnapshot(
     val clips: List<ClipSegment>,
     val selectedClipId: String?,
+    val selectedFrameId: String?,
     val nextClipNumber: Int,
     val startTime: String,
     val endTime: String
 )
-
 
 @Composable
 private fun ClipkaApp() {
@@ -712,16 +713,19 @@ private fun EditorScreen(
     }
     
 
-    val undoStack = remember {
+    
+    val undoStack = remember(project?.id) {
         mutableStateListOf<EditorSnapshot>()
     }
-    val redoStack = remember {
+
+    val redoStack = remember(project?.id) {
         mutableStateListOf<EditorSnapshot>()
     }
 
     fun currentSnapshot() = EditorSnapshot(
         clips = clips.toList(),
         selectedClipId = selectedClipId,
+        selectedFrameId = selectedFrameId,
         nextClipNumber = nextClipNumber,
         startTime = startTime,
         endTime = endTime
@@ -744,10 +748,14 @@ private fun EditorScreen(
         }
 
         redoStack.add(currentSnapshot())
-        val previous = undoStack.removeAt(undoStack.lastIndex)
+
+        val previous = undoStack.removeAt(
+            undoStack.lastIndex
+        )
 
         clips = previous.clips
         selectedClipId = previous.selectedClipId
+        selectedFrameId = previous.selectedFrameId
         nextClipNumber = previous.nextClipNumber
         startTime = previous.startTime
         endTime = previous.endTime
@@ -760,14 +768,19 @@ private fun EditorScreen(
         }
 
         undoStack.add(currentSnapshot())
-        val next = redoStack.removeAt(redoStack.lastIndex)
+
+        val next = redoStack.removeAt(
+            redoStack.lastIndex
+        )
 
         clips = next.clips
         selectedClipId = next.selectedClipId
+        selectedFrameId = next.selectedFrameId
         nextClipNumber = next.nextClipNumber
         startTime = next.startTime
         endTime = next.endTime
     }
+
     
     fun addClipFromRange(): Boolean {
         if (videoUri == null) {
@@ -899,8 +912,10 @@ private fun EditorScreen(
         }
     }
 
+    
     fun detectFacesForSelectedClip() {
         val sourceUri = videoUri
+
         val selected = clips.firstOrNull {
             it.id == selectedClipId
         }
@@ -916,7 +931,10 @@ private fun EditorScreen(
         }
 
         coroutineScope.launch {
-            showMessage(context, "Detecting face on this device...")
+            showMessage(
+                context,
+                "Analyzing sampled video frames..."
+            )
 
             val result = runCatching {
                 ClipkaFaceDetection.detectFaces(
@@ -924,66 +942,89 @@ private fun EditorScreen(
                     sourceUri,
                     selected.startMs,
                     selected.endMs,
-                    maxFaces = 1
+                    maxFaces = 6
                 )
             }
 
             result.onSuccess { detectedFrames ->
-                val faceFrame = detectedFrames.firstOrNull()
-
-                if (faceFrame == null) {
+                if (detectedFrames.isEmpty()) {
                     autoFace = false
-                    showMessage(context, "No face detected in this clip")
+                    showMessage(context, "No faces detected")
                     return@onSuccess
                 }
 
-                                saveUndoState()
+                val detectedCount = detectedFrames.size
+                val rows = (detectedCount + 1) / 2
 
-                val existingFrames = selected.frames
+                val placedFrames = detectedFrames.mapIndexed {
+                    index,
+                    frame ->
 
-                val targetFrame = existingFrames.firstOrNull {
-                    it.id == selectedFrameId
-                } ?: existingFrames.firstOrNull()
+                    val row = index / 2
+                    val column = index % 2
 
-                val updatedFrame = targetFrame?.copy(
-                    x = faceFrame.x,
-                    y = faceFrame.y,
-                    width = faceFrame.width,
-                    height = faceFrame.height,
-                    detectedFace = faceFrame.detectedFace,
-                    detectionConfidence = faceFrame.detectionConfidence
-                ) ?: faceFrame
+                    val isLastSingleFrame =
+                        detectedCount % 2 == 1 &&
+                            index == detectedCount - 1
+
+                    val outputX = if (
+                        isLastSingleFrame
+                    ) {
+                        0f
+                    } else {
+                        column * 0.5f
+                    }
+
+                    val outputWidth = if (
+                        isLastSingleFrame || detectedCount == 1
+                    ) {
+                        1f
+                    } else {
+                        0.5f
+                    }
+
+                    val outputHeight = if (
+                        detectedCount == 1
+                    ) {
+                        1f
+                    } else {
+                        1f / rows.toFloat()
+                    }
+
+                    frame.copy(
+                        name = "Face ${index + 1}",
+                        outputX = outputX,
+                        outputY = row * outputHeight,
+                        outputWidth = outputWidth,
+                        outputHeight = outputHeight
+                    )
+                }
+
+                saveUndoState()
 
                 clips = clips.map { clip ->
-                    if (clip.id != selected.id) {
-                        clip
-                    } else {
-                        val updatedFrames = if (targetFrame != null) {
-                            clip.frames.map { frame ->
-                                if (frame.id == targetFrame.id) {
-                                    updatedFrame
-                                } else {
-                                    frame
-                                }
-                            }
-                        } else {
-                            clip.frames + updatedFrame
-                        }
-
+                    if (clip.id == selected.id) {
                         clip.copy(
-                            frames = updatedFrames,
-                            frameLayout = "CUSTOM"
+                            frames = placedFrames,
+                            frameLayout = if (
+                                placedFrames.size > 1
+                            ) {
+                                "CUSTOM"
+                            } else {
+                                "SINGLE"
+                            }
                         )
+                    } else {
+                        clip
                     }
                 }
 
-                selectedFrameId = updatedFrame.id
-
+                selectedFrameId = placedFrames.first().id
                 autoFace = true
 
                 showMessage(
                     context,
-                    "Face crop applied to ${selected.name}"
+                    "$detectedCount face regions added"
                 )
             }.onFailure { error ->
                 autoFace = false
@@ -1000,6 +1041,7 @@ private fun EditorScreen(
     }
 
 
+
     if (toolMode == ToolMode.PREVIEW) {
         PreviewScreen(
             fileName = fileName,
@@ -1009,34 +1051,50 @@ private fun EditorScreen(
                         selectedClip = clips.firstOrNull {
                 it.id == selectedClipId
             },
-            selectedTemplate = selectedTemplate,
             
             onSelectTemplate = { template ->
-                val currentId = selectedClipId
-
-                if (currentId == null) {
-                    showMessage(context, "Select or add a clip first")
+                if (template.id == 3) {
+                    showMessage(
+                        context,
+                        "Diagonal masking is not supported yet"
+                    )
                 } else {
-                    saveUndoState()
+                    val currentId = selectedClipId
 
-                                        clips = clips.map { clip ->
-                        if (clip.id == currentId) {
-                            clip.copy(
-                                frameLayout = templateLayout(template.id),
-                                frames = applyTemplateToFrames(
-                                    templateId = template.id,
-                                    existingFrames = clip.frames
+                    if (currentId == null) {
+                        showMessage(
+                            context,
+                            "Select or add a clip first"
+                        )
+                    } else {
+                        saveUndoState()
+
+                        clips = clips.map { clip ->
+                            if (clip.id == currentId) {
+                                clip.copy(
+                                    frameLayout = templateLayout(
+                                        template.id
+                                    ),
+                                    frames = applyTemplateToFrames(
+                                        templateId = template.id,
+                                        existingFrames = clip.frames
+                                    )
                                 )
-                            )
-                        } else {
-                            clip
+                            } else {
+                                clip
+                            }
                         }
-                    }
 
-                    selectedTemplate = template.id
-                    showMessage(context, "${template.title} applied to selected clip")
+                        selectedTemplate = template.id
+
+                        showMessage(
+                            context,
+                            "${template.title} applied"
+                        )
+                    }
                 }
             },
+
 
             onSelectRatio = { ratio ->
                 val currentId = selectedClipId
@@ -1885,7 +1943,8 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
     selectedFrameId = updatedFrame.id
     showMessage(context, "Selected speaker crop updated")
               }
-                      fun addSpeakerFrame() {
+                      
+        fun addSpeakerFrame() {
             val selected = clips.firstOrNull {
                 it.id == selectedClipId
             }
@@ -1896,32 +1955,39 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
             }
 
             if (selected.frames.size >= 6) {
-                showMessage(context, "Maximum 6 speaker frames allowed")
+                showMessage(
+                    context,
+                    "Maximum 6 speaker frames allowed"
+                )
                 return
             }
 
             saveUndoState()
 
-            val totalCount = selected.frames.size + 1
-            val slotHeight = 1f / totalCount.toFloat()
+            val index = selected.frames.size
+
+            val placement = when (index) {
+                0 -> listOf(0f, 0f, 1f, 1f)
+                1 -> listOf(0.68f, 0.05f, 0.28f, 0.28f)
+                2 -> listOf(0.68f, 0.38f, 0.28f, 0.28f)
+                3 -> listOf(0.04f, 0.68f, 0.28f, 0.28f)
+                4 -> listOf(0.04f, 0.36f, 0.28f, 0.28f)
+                else -> listOf(0.04f, 0.05f, 0.28f, 0.28f)
+            }
 
             val newFrame = FrameRegion(
-                name = "Speaker $totalCount",
+                name = "Speaker ${index + 1}",
                 x = 0.20f,
                 y = 0.10f,
                 width = 0.60f,
-                height = 0.80f
+                height = 0.80f,
+                outputX = placement[0],
+                outputY = placement[1],
+                outputWidth = placement[2],
+                outputHeight = placement[3]
             )
 
-            val updatedFrames = (selected.frames + newFrame)
-                .mapIndexed { index, frame ->
-                    frame.copy(
-                        outputX = 0f,
-                        outputY = index * slotHeight,
-                        outputWidth = 1f,
-                        outputHeight = slotHeight
-                    )
-                }
+            val updatedFrames = selected.frames + newFrame
 
             clips = clips.map { clip ->
                 if (clip.id == selected.id) {
@@ -1935,8 +2001,107 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
             }
 
             selectedFrameId = newFrame.id
-            showMessage(context, "${newFrame.name} added")
+
+            showMessage(
+                context,
+                "${newFrame.name} added"
+            )
         }
+        
+        fun updateSelectedFramePlacement(
+            dx: Float = 0f,
+            dy: Float = 0f,
+            dw: Float = 0f,
+            dh: Float = 0f
+        ) {
+            val clip = clips.firstOrNull {
+                it.id == selectedClipId
+            } ?: return
+
+            val frame = clip.frames.firstOrNull {
+                it.id == selectedFrameId
+            } ?: return
+
+            val newWidth = (
+                frame.outputWidth + dw
+            ).coerceIn(0.08f, 1f)
+
+            val newHeight = (
+                frame.outputHeight + dh
+            ).coerceIn(0.08f, 1f)
+
+            val newX = (
+                frame.outputX + dx
+            ).coerceIn(0f, 1f - newWidth)
+
+            val newY = (
+                frame.outputY + dy
+            ).coerceIn(0f, 1f - newHeight)
+
+            val updatedFrame = frame.copy(
+                outputX = newX,
+                outputY = newY,
+                outputWidth = newWidth,
+                outputHeight = newHeight
+            )
+
+            if (updatedFrame == frame) return
+
+            saveUndoState()
+
+            clips = clips.map { currentClip ->
+                if (currentClip.id == clip.id) {
+                    currentClip.copy(
+                        frames = currentClip.frames.map {
+                            if (it.id == frame.id) {
+                                updatedFrame
+                            } else {
+                                it
+                            }
+                        }
+                    )
+                } else {
+                    currentClip
+                }
+            }
+        }
+
+        fun deleteSelectedFrame() {
+            val clip = clips.firstOrNull {
+                it.id == selectedClipId
+            } ?: return
+
+            if (selectedFrameId == null) return
+
+            val remaining = clip.frames.filterNot {
+                it.id == selectedFrameId
+            }
+
+            if (remaining.size == clip.frames.size) return
+
+            saveUndoState()
+
+            clips = clips.map { currentClip ->
+                if (currentClip.id == clip.id) {
+                    currentClip.copy(
+                        frames = remaining,
+                        frameLayout = if (remaining.isEmpty()) {
+                            "SINGLE"
+                        } else {
+                            "CUSTOM"
+                        }
+                    )
+                } else {
+                    currentClip
+                }
+            }
+
+            selectedFrameId = remaining.firstOrNull()?.id
+
+            showMessage(context, "Speaker frame deleted")
+        }
+
+
 
               
         // Trim the selected timeline clip.
@@ -2261,14 +2426,102 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
                         }
                     )
                 }
-                                ToolMode.OUTPUT -> {
-    ToolButton(
-        label = "Back",
-        icon = Icons.Default.ArrowBack,
-        onClick = {
-            toolMode = ToolMode.EDIT
-        }
-    )
+                                
+                ToolMode.OUTPUT -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = {
+                            toolMode = ToolMode.EDIT
+                        }
+                    )
+
+                    clips.firstOrNull {
+                        it.id == selectedClipId
+                    }?.frames?.forEach { frame ->
+                        ToolButton(
+                            label = frame.name,
+                            icon = Icons.Default.Face,
+                            active = frame.id == selectedFrameId,
+                            onClick = {
+                                selectedFrameId = frame.id
+                            }
+                        )
+                    }
+
+                    ToolButton(
+                        label = "Left",
+                        icon = Icons.Default.ArrowLeft,
+                        onClick = {
+                            updateSelectedFramePlacement(dx = -0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Right",
+                        icon = Icons.Default.ArrowRight,
+                        onClick = {
+                            updateSelectedFramePlacement(dx = 0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Up",
+                        icon = Icons.Default.ArrowUpward,
+                        onClick = {
+                            updateSelectedFramePlacement(dy = -0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Down",
+                        icon = Icons.Default.ArrowDownward,
+                        onClick = {
+                            updateSelectedFramePlacement(dy = 0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Wider",
+                        icon = Icons.Default.ZoomIn,
+                        onClick = {
+                            updateSelectedFramePlacement(dw = 0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Narrow",
+                        icon = Icons.Default.ZoomOut,
+                        onClick = {
+                            updateSelectedFramePlacement(dw = -0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Taller",
+                        icon = Icons.Default.ZoomIn,
+                        onClick = {
+                            updateSelectedFramePlacement(dh = 0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Shorter",
+                        icon = Icons.Default.ZoomOut,
+                        onClick = {
+                            updateSelectedFramePlacement(dh = -0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Delete",
+                        icon = Icons.Default.Delete,
+                        onClick = {
+                            deleteSelectedFrame()
+                        }
+                    )
+                }
+
 
     clips.firstOrNull { it.id == selectedClipId }
         ?.frames
