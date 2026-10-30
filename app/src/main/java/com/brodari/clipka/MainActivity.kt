@@ -725,13 +725,12 @@ private fun EditorScreen(
         mutableStateListOf<EditorSnapshot>()
     }
 
-    fun currentSnapshot() = EditorSnapshot(
+        fun currentSnapshot() = EditorSnapshot(
         clips = clips.toList(),
         selectedClipId = selectedClipId,
         selectedFrameId = selectedFrameId,
-                nextClipNumber = nextClipNumber,
+        nextClipNumber = nextClipNumber,
         startTime = startTime,
-                startTime = startTime,
         endTime = endTime,
         selectedTemplate = selectedTemplate
     )
