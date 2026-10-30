@@ -1783,51 +1783,36 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                         }
                     )
 
-                                        ToolButton(
+                                                            ToolButton(
                         label = "Crop",
                         icon = Icons.Default.Crop,
                         onClick = {
                             val selected = clips.firstOrNull {
-                                onClick = {
-    val selected = clips.firstOrNull {
-        it.id == selectedClipId
-clips.firstOrNull { it.id == selectedClipId }
-    ?.frames
-    ?.forEachIndexed { index, frame ->
-        ToolButton(
-            label = frame.name,
-            icon = Icons.Default.Face,
-            active = frame.id == selectedFrameId,
-            onClick = {
-                selectedFrameId = frame.id
-            }
-        )
-    }
+                                it.id == selectedClipId
+                            }
 
-    }
+                            if (selected == null) {
+                                showMessage(context, "Select a clip first")
+                            } else {
+                                if (selected.frames.isEmpty()) {
+                                    val initialFrame = FrameRegion(
+                                        name = "Speaker 1",
+                                        x = 0.1f,
+                                        y = 0.1f,
+                                        width = 0.8f,
+                                        height = 0.8f
+                                    )
 
-    if (selected == null) {
-        showMessage(context, "Select a clip first")
-    } else {
-        if (selected.frames.isEmpty()) {
-            val initialFrame = FrameRegion(
-                name = "Speaker 1",
-                x = 0.1f,
-                y = 0.1f,
-                width = 0.8f,
-                height = 0.8f
-            )
+                                    applyCropFrame(initialFrame)
+                                    selectedFrameId = initialFrame.id
+                                } else {
+                                    selectedFrameId = selected.frames.first().id
+                                }
 
-            applyCropFrame(initialFrame)
-            selectedFrameId = initialFrame.id
-        } else {
-            selectedFrameId = selected.frames.first().id
-        }
-
-        toolMode = ToolMode.CROP
-    }
-}
-) 
+                                toolMode = ToolMode.CROP
+                            }
+                        }
+                    )
                     ToolButton(
                         label = "Resize",
                         icon = Icons.Default.AspectRatio,
@@ -1868,7 +1853,20 @@ clips.firstOrNull { it.id == selectedClipId }
                         onClick = {
                             toolMode = ToolMode.EDIT
                         }
-                    )
+                    
+                   )
+                                        clips.firstOrNull { it.id == selectedClipId }
+                        ?.frames
+                        ?.forEach { frame ->
+                            ToolButton(
+                                label = frame.name,
+                                icon = Icons.Default.Face,
+                                active = frame.id == selectedFrameId,
+                                onClick = {
+                                    selectedFrameId = frame.id
+                                }
+                            )
+                        }
 
                     ToolButton(
                         label = "Center",
