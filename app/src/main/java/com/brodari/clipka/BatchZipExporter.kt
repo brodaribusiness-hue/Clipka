@@ -194,9 +194,9 @@ if (
                 })
                 .build()
 
-            activeTransformer = transformer
+                        activeTransformer = transformer
 
-                        when {
+            when {
                 clip.frameLayout in setOf(
                     "SPLIT_VERTICAL",
                     "SPLIT_60_40",
@@ -224,7 +224,6 @@ if (
                         targetRatio = targetRatio
                     )
                 }
-            }
             }
         } catch (error: Exception) {
             onProgress(
