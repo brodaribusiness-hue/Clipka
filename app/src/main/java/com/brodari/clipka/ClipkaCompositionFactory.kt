@@ -68,7 +68,7 @@ object ClipkaCompositionFactory {
         clip: ClipSegment
     ): EditedMediaItem {
         val targetRatio = aspectRatio(clip.aspectRatio)
-        val effects = mutableListOf<Effect>
+        val effects = mutableListOf<Effect>()
                     effects.add(Brightness(clip.brightness))
         effects.add(Contrast(clip.contrast))
         effects.add(
