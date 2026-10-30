@@ -1,4 +1,3 @@
-
 package com.brodari.clipka
 
 import android.content.Context
@@ -9,14 +8,17 @@ import android.net.Uri
 import kotlin.math.abs
 
 /**
- * On-device scene-change detection.
- * This detects visual changes, not viral potential.
+ * Local visual scene analysis.
+ *
+ * Detects visual scene changes and creates usable clip ranges.
+ * It does not claim to predict virality or understand speech.
  */
 object AutoClipAnalyzer {
 
     private const val SAMPLE_SIZE = 32
     private const val MIN_CLIP_MS = 30_000L
     private const val TARGET_CLIP_MS = 60_000L
+    private const val MAX_CLIP_MS = 180_000L
     private const val MIN_SCENE_GAP_MS = 15_000L
     private const val CHANGE_THRESHOLD = 0.26
 
@@ -29,77 +31,93 @@ object AutoClipAnalyzer {
             "Video duration is not available."
         }
 
+        // A source shorter than 30 seconds is returned as one clip.
+        if (durationMs <= MIN_CLIP_MS) {
+            return listOf(0L to durationMs)
+        }
+
         val retriever = MediaMetadataRetriever()
         val sceneCuts = mutableListOf<Long>()
-        var previous: Bitmap? = null
+        var previousFrame: Bitmap? = null
         var lastCutMs = 0L
 
         try {
             retriever.setDataSource(context, uri)
 
-            // Limit analysis work for long videos.
             val intervalMs = maxOf(
-                5_000L,
-                durationMs / 240L
+                2_000L,
+                durationMs / 360L
             )
 
             var timestampMs = 0L
 
             while (timestampMs < durationMs) {
-                val frame = retriever.getFrameAtTime(
+                val original = retriever.getFrameAtTime(
                     timestampMs * 1_000L,
                     MediaMetadataRetriever.OPTION_CLOSEST
                 )
 
-                if (frame != null) {
+                if (original != null) {
                     val scaled = Bitmap.createScaledBitmap(
-                        frame,
+                        original,
                         SAMPLE_SIZE,
                         SAMPLE_SIZE,
                         true
                     )
 
-                    if (scaled !== frame) {
-                        frame.recycle()
+                    if (scaled !== original) {
+                        original.recycle()
                     }
 
-                    val oldFrame = previous
+                    val previous = previousFrame
 
-                    if (oldFrame != null) {
+                    if (previous != null) {
                         val difference = frameDifference(
-                            oldFrame,
+                            previous,
                             scaled
                         )
 
-                        if (
+                        val isValidCut =
                             difference >= CHANGE_THRESHOLD &&
                             timestampMs - lastCutMs >= MIN_SCENE_GAP_MS &&
-                            timestampMs >= MIN_CLIP_MS
-                        ) {
+                            timestampMs >= MIN_CLIP_MS &&
+                            durationMs - timestampMs >= MIN_CLIP_MS
+
+                        if (isValidCut) {
                             sceneCuts.add(timestampMs)
                             lastCutMs = timestampMs
                         }
 
-                        oldFrame.recycle()
+                        previous.recycle()
                     }
 
-                    previous = scaled
+                    previousFrame = scaled
                 }
 
                 timestampMs += intervalMs
             }
         } finally {
-            previous?.recycle()
+            previousFrame?.recycle()
             retriever.release()
         }
 
-        return buildSegments(durationMs, sceneCuts)
+        return buildSegments(
+            durationMs = durationMs,
+            sceneCuts = sceneCuts
+        )
     }
 
     private fun frameDifference(
         first: Bitmap,
         second: Bitmap
     ): Double {
+        if (
+            first.width != second.width ||
+            first.height != second.height
+        ) {
+            return 0.0
+        }
+
         var difference = 0L
         val pixelCount = first.width * first.height
 
@@ -122,44 +140,68 @@ object AutoClipAnalyzer {
         durationMs: Long,
         sceneCuts: List<Long>
     ): List<Pair<Long, Long>> {
-        val maxClipMs = ClipSegment.MAX_CLIP_DURATION_MS
-        val cuts = sceneCuts.distinct().sorted()
+        if (durationMs <= 0L) return emptyList()
+
+        if (durationMs <= MAX_CLIP_MS) {
+            return listOf(0L to durationMs)
+        }
+
+        val validCuts = sceneCuts
+            .distinct()
+            .filter { it in MIN_CLIP_MS until durationMs }
+            .sorted()
+
         val segments = mutableListOf<Pair<Long, Long>>()
         var startMs = 0L
 
-        while (durationMs - startMs > maxClipMs) {
-            val minEndMs = startMs + MIN_CLIP_MS
-            val maxEndMs = minOf(
-                startMs + maxClipMs,
+        while (durationMs - startMs > MAX_CLIP_MS) {
+            val minimumEnd = startMs + MIN_CLIP_MS
+            val maximumEnd = minOf(
+                startMs + MAX_CLIP_MS,
                 durationMs
             )
-            val targetEndMs = startMs + TARGET_CLIP_MS
+            val targetEnd = minOf(
+                startMs + TARGET_CLIP_MS,
+                maximumEnd
+            )
 
-            val chosenEndMs = cuts
-                .filter { it in minEndMs..maxEndMs }
-                .minByOrNull { abs(it - targetEndMs) }
-                ?: targetEndMs.coerceIn(minEndMs, maxEndMs)
+            val sceneEnd = validCuts
+                .filter { it in minimumEnd..maximumEnd }
+                .minByOrNull { abs(it - targetEnd) }
 
-            segments.add(startMs to chosenEndMs)
-            startMs = chosenEndMs
+            val endMs = (
+                sceneEnd ?: targetEnd
+            ).coerceIn(minimumEnd, maximumEnd)
+
+            if (endMs <= startMs) break
+
+            segments.add(startMs to endMs)
+            startMs = endMs
         }
 
         if (startMs < durationMs) {
-            val remainingMs = durationMs - startMs
+            val remaining = durationMs - startMs
 
             if (
-                remainingMs < MIN_CLIP_MS &&
-                segments.isNotEmpty() &&
-                durationMs - segments.last().first <= maxClipMs
+                remaining < MIN_CLIP_MS &&
+                segments.isNotEmpty()
             ) {
-                val previousStart = segments.last().first
-                segments[segments.lastIndex] =
-                    previousStart to durationMs
+                val previous = segments.last()
+                val combinedDuration = durationMs - previous.first
+
+                if (combinedDuration <= MAX_CLIP_MS) {
+                    segments[segments.lastIndex] =
+                        previous.first to durationMs
+                } else {
+                    segments.add(startMs to durationMs)
+                }
             } else {
                 segments.add(startMs to durationMs)
             }
         }
 
-        return segments.filter { (start, end) -> end > start }
+        return segments.filter { (start, end) ->
+            end > start
+        }
     }
 }
