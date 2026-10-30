@@ -1330,6 +1330,152 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
         }
     }
 }
+if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(
+                selectedClipId,
+                selectedFrameId,
+                activeFrame.outputX,
+                activeFrame.outputY,
+                activeFrame.outputWidth,
+                activeFrame.outputHeight
+            ) {
+                var dragX = 0f
+                var dragY = 0f
+                var initialX = 0f
+                var initialY = 0f
+                var initialWidth = 0f
+                var initialHeight = 0f
+                var resizeMode = false
+
+                detectDragGestures(
+                    onDragStart = { offset ->
+                        dragX = 0f
+                        dragY = 0f
+
+                        initialX = activeFrame.outputX
+                        initialY = activeFrame.outputY
+                        initialWidth = activeFrame.outputWidth
+                        initialHeight = activeFrame.outputHeight
+
+                        val cornerX =
+                            (initialX + initialWidth) * size.width
+                        val cornerY =
+                            (initialY + initialHeight) * size.height
+
+                        val dx = offset.x - cornerX
+                        val dy = offset.y - cornerY
+                        val handleRadius = 44.dp.toPx()
+
+                        resizeMode =
+                            dx * dx + dy * dy <=
+                                handleRadius * handleRadius
+
+                        saveUndoState()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+
+                        if (size.width <= 0 || size.height <= 0) {
+                            return@detectDragGestures
+                        }
+
+                        dragX += dragAmount.x / size.width.toFloat()
+                        dragY += dragAmount.y / size.height.toFloat()
+
+                        clips = clips.map { clip ->
+                            if (clip.id != selectedClipId) {
+                                clip
+                            } else {
+                                clip.copy(
+                                    frames = clip.frames.map { frame ->
+                                        if (frame.id != activeFrame.id) {
+                                            frame
+                                        } else if (resizeMode) {
+                                            frame.copy(
+                                                outputWidth = (
+                                                    initialWidth + dragX
+                                                ).coerceIn(
+                                                    0.08f,
+                                                    1f - initialX
+                                                ),
+                                                outputHeight = (
+                                                    initialHeight + dragY
+                                                ).coerceIn(
+                                                    0.08f,
+                                                    1f - initialY
+                                                )
+                                            )
+                                        } else {
+                                            frame.copy(
+                                                outputX = (
+                                                    initialX + dragX
+                                                ).coerceIn(
+                                                    0f,
+                                                    1f - initialWidth
+                                                ),
+                                                outputY = (
+                                                    initialY + dragY
+                                                ).coerceIn(
+                                                    0f,
+                                                    1f - initialHeight
+                                                )
+                                            )
+                                        }
+                                    },
+                                    frameLayout = "CUSTOM"
+                                )
+                            }
+                        }
+                    }
+                )
+            }
+    ) {
+        cropFrames.forEach { frame ->
+            val left = frame.outputX * size.width
+            val top = frame.outputY * size.height
+            val right =
+                (frame.outputX + frame.outputWidth) * size.width
+            val bottom =
+                (frame.outputY + frame.outputHeight) * size.height
+
+            val isSelected = frame.id == activeFrame.id
+
+            drawRect(
+                color = if (isSelected) Accent else Color.White,
+                topLeft = androidx.compose.ui.geometry.Offset(
+                    left,
+                    top
+                ),
+                size = androidx.compose.ui.geometry.Size(
+                    right - left,
+                    bottom - top
+                ),
+                style = Stroke(
+                    width = if (isSelected) 4.dp.toPx() else 2.dp.toPx()
+                )
+            )
+
+            if (isSelected) {
+                val handleSize = 16.dp.toPx()
+
+                drawRect(
+                    color = Accent,
+                    topLeft = androidx.compose.ui.geometry.Offset(
+                        right - handleSize / 2f,
+                        bottom - handleSize / 2f
+                    ),
+                    size = androidx.compose.ui.geometry.Size(
+                        handleSize,
+                        handleSize
+                    )
+                )
+            }
+        }
+    }
+}
 
         Spacer(Modifier.height(7.dp))
 
@@ -1952,15 +2098,21 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                         }
                     )
                     ToolButton(
-                        label = "Resize",
-                        icon = Icons.Default.AspectRatio,
-                        onClick = {
-                            showMessage(
-                                context,
-                                "Resize editing will be implemented in Phase 2"
-                            )
-                        }
-                    )
+    label = "Resize",
+    icon = Icons.Default.AspectRatio,
+    onClick = {
+        val selected = clips.firstOrNull {
+            it.id == selectedClipId
+        }
+
+        if (selected == null || selected.frames.isEmpty()) {
+            showMessage(context, "Add speaker frames first")
+        } else {
+            selectedFrameId = selected.frames.first().id
+            toolMode = ToolMode.OUTPUT
+        }
+    }
+)
 
                     ToolButton(
                         label = "Zoom",
@@ -2109,6 +2261,28 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                         }
                     )
                 }
+                                ToolMode.OUTPUT -> {
+    ToolButton(
+        label = "Back",
+        icon = Icons.Default.ArrowBack,
+        onClick = {
+            toolMode = ToolMode.EDIT
+        }
+    )
+
+    clips.firstOrNull { it.id == selectedClipId }
+        ?.frames
+        ?.forEach { frame ->
+            ToolButton(
+                label = frame.name,
+                icon = Icons.Default.Face,
+                active = frame.id == selectedFrameId,
+                onClick = {
+                    selectedFrameId = frame.id
+                }
+            )
+        }
+}
 
                 ToolMode.PREVIEW -> {
                     // PreviewScreen is displayed by the early return above.
