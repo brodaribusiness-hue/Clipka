@@ -1051,6 +1051,14 @@ private fun EditorScreen(
                         selectedClip = clips.firstOrNull {
                 it.id == selectedClipId
             },
+                   
+            selectedClip = clips.firstOrNull {
+                it.id == selectedClipId
+            },
+            selectedTemplate = selectedTemplate,
+
+            onSelectTemplate = { template ->
+
             
             onSelectTemplate = { template ->
                 if (template.id == 3) {
@@ -1388,109 +1396,110 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
         }
     }
 }
-if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
-    Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(
-                selectedClipId,
-                selectedFrameId,
-                activeFrame.outputX,
-                activeFrame.outputY,
-                activeFrame.outputWidth,
-                activeFrame.outputHeight
-            ) {
-                var dragX = 0f
-                var dragY = 0f
-                var initialX = 0f
-                var initialY = 0f
-                var initialWidth = 0f
-                var initialHeight = 0f
-                var resizeMode = false
 
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        dragX = 0f
-                        dragY = 0f
-
-                        initialX = activeFrame.outputX
-                        initialY = activeFrame.outputY
-                        initialWidth = activeFrame.outputWidth
-                        initialHeight = activeFrame.outputHeight
-
-                        val cornerX =
-                            (initialX + initialWidth) * size.width
-                        val cornerY =
-                            (initialY + initialHeight) * size.height
-
-                        val dx = offset.x - cornerX
-                        val dy = offset.y - cornerY
-                        val handleRadius = 44.dp.toPx()
-
-                        resizeMode =
-                            dx * dx + dy * dy <=
-                                handleRadius * handleRadius
-
-                        saveUndoState()
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-
-                        if (size.width <= 0 || size.height <= 0) {
-                            return@detectDragGestures
+                ToolMode.OUTPUT -> {
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = {
+                            toolMode = ToolMode.EDIT
                         }
+                    )
 
-                        dragX += dragAmount.x / size.width.toFloat()
-                        dragY += dragAmount.y / size.height.toFloat()
-
-                        clips = clips.map { clip ->
-                            if (clip.id != selectedClipId) {
-                                clip
-                            } else {
-                                clip.copy(
-                                    frames = clip.frames.map { frame ->
-                                        if (frame.id != activeFrame.id) {
-                                            frame
-                                        } else if (resizeMode) {
-                                            frame.copy(
-                                                outputWidth = (
-                                                    initialWidth + dragX
-                                                ).coerceIn(
-                                                    0.08f,
-                                                    1f - initialX
-                                                ),
-                                                outputHeight = (
-                                                    initialHeight + dragY
-                                                ).coerceIn(
-                                                    0.08f,
-                                                    1f - initialY
-                                                )
-                                            )
-                                        } else {
-                                            frame.copy(
-                                                outputX = (
-                                                    initialX + dragX
-                                                ).coerceIn(
-                                                    0f,
-                                                    1f - initialWidth
-                                                ),
-                                                outputY = (
-                                                    initialY + dragY
-                                                ).coerceIn(
-                                                    0f,
-                                                    1f - initialHeight
-                                                )
-                                            )
-                                        }
-                                    },
-                                    frameLayout = "CUSTOM"
-                                )
+                    clips.firstOrNull {
+                        it.id == selectedClipId
+                    }?.frames?.forEach { frame ->
+                        ToolButton(
+                            label = frame.name,
+                            icon = Icons.Default.Face,
+                            active = frame.id == selectedFrameId,
+                            onClick = {
+                                selectedFrameId = frame.id
                             }
-                        }
+                        )
                     }
-                )
+
+                    ToolButton(
+                        label = "Left",
+                        icon = Icons.Default.ArrowLeft,
+                        onClick = {
+                            updateSelectedFramePlacement(dx = -0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Right",
+                        icon = Icons.Default.ArrowRight,
+                        onClick = {
+                            updateSelectedFramePlacement(dx = 0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Up",
+                        icon = Icons.Default.ArrowUpward,
+                        onClick = {
+                            updateSelectedFramePlacement(dy = -0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Down",
+                        icon = Icons.Default.ArrowDownward,
+                        onClick = {
+                            updateSelectedFramePlacement(dy = 0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Wider",
+                        icon = Icons.Default.ZoomIn,
+                        onClick = {
+                            updateSelectedFramePlacement(dw = 0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Narrow",
+                        icon = Icons.Default.ZoomOut,
+                        onClick = {
+                            updateSelectedFramePlacement(dw = -0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Taller",
+                        icon = Icons.Default.ZoomIn,
+                        onClick = {
+                            updateSelectedFramePlacement(dh = 0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Shorter",
+                        icon = Icons.Default.ZoomOut,
+                        onClick = {
+                            updateSelectedFramePlacement(dh = -0.05f)
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Delete",
+                        icon = Icons.Default.Delete,
+                        onClick = {
+                            deleteSelectedFrame()
+                        }
+                    )
+                }
+
+                ToolMode.PREVIEW -> {
+                    // PreviewScreen is displayed by the early return above.
+                }
             }
-    ) {
+        }
+    }
+}
+
         cropFrames.forEach { frame ->
             val left = frame.outputX * size.width
             val top = frame.outputY * size.height
