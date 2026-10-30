@@ -1,4 +1,3 @@
-
 package com.brodari.clipka
 
 import android.content.Context
@@ -7,12 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.effect.Crop
-import androidx.media3.effect.Presentation
 import androidx.media3.transformer.Composition
-import androidx.media3.transformer.EditedMediaItem
-import androidx.media3.transformer.EditedMediaItemSequence
-import androidx.media3.transformer.Effects
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
@@ -37,32 +31,27 @@ class BatchZipExporter(
     private var finished = false
 
     fun start() {
+        if (finished) return
+
         if (clips.isEmpty()) {
-            onProgress("No clips to export.")
-            finish(null)
+            finish(null, "No clips to export.")
             return
         }
 
-        val invalidClip = clips.firstOrNull {
-            it.validate() !is ClipValidationResult.Valid
+        val invalidClip = clips.firstOrNull { clip ->
+            ClipkaCompositionFactory.validateForComposition(clip) != null
         }
 
         if (invalidClip != null) {
-            onProgress("Invalid clip: ${invalidClip.name}")
-            finish(null)
-            return
-        }
+            val reason =
+                ClipkaCompositionFactory.validateForComposition(
+                    invalidClip
+                ) ?: "Invalid clip settings."
 
-        val diagonalClip = clips.firstOrNull {
-            it.frameLayout == "SPLIT_DIAGONAL"
-        }
-
-        if (diagonalClip != null) {
-            onProgress(
-                "Diagonal split export is not supported yet: " +
-                    diagonalClip.name
+            finish(
+                null,
+                "Cannot export ${invalidClip.name}: $reason"
             )
-            finish(null)
             return
         }
 
@@ -83,39 +72,6 @@ class BatchZipExporter(
             .build()
     }
 
-    private fun getTargetRatio(clip: ClipSegment): Float {
-        return when (clip.aspectRatio) {
-            "9:16" -> 9f / 16f
-            "1:1" -> 1f
-            "16:9" -> 16f / 9f
-            else -> 9f / 16f
-        }
-    }
-
-    private fun createCrop(frame: FrameRegion): Crop {
-        val left = -1f + 2f * frame.x
-        val right = -1f + 2f * (frame.x + frame.width)
-        val top = 1f - 2f * frame.y
-        val bottom = 1f - 2f * (frame.y + frame.height)
-
-        return Crop(left, right, bottom, top)
-    }
-
-    private fun createVideoItem(
-    mediaItem: MediaItem,
-    frame: FrameRegion
-): EditedMediaItem {
-    return EditedMediaItem.Builder(mediaItem)
-        .setRemoveAudio(true)
-        .setEffects(
-            Effects(
-                emptyList(),
-                listOf(createCrop(frame))
-            )
-        )
-        .build()
-}
-
     private fun exportNextClip() {
         if (finished) return
 
@@ -125,26 +81,6 @@ class BatchZipExporter(
         }
 
         val clip = clips[currentIndex]
-        val splitLayouts = setOf(
-    "SPLIT_VERTICAL",
-    "SPLIT_60_40",
-    "SPLIT_40_60",
-    "SPLIT_HORIZONTAL",
-    "SPLIT_DIAGONAL"
-)
-
-if (
-    clip.frameLayout in splitLayouts &&
-    clip.frames.size < 2
-) {
-    onProgress(
-        "Split-screen ke liye 2 frame regions zaroori hain: " +
-            clip.name
-    )
-    finish(null)
-    return
-}
-
         val outputFile = File(
             context.cacheDir,
             "clipka_batch_${System.currentTimeMillis()}_$currentIndex.mp4"
@@ -153,198 +89,112 @@ if (
         tempFiles.add(outputFile)
 
         try {
-            onProgress(
+            postProgress(
                 "Exporting ${currentIndex + 1}/${clips.size}: ${clip.name}"
             )
 
             val mediaItem = createClippedMediaItem(clip)
-            val targetRatio = getTargetRatio(clip)
 
-            val transformer = Transformer.Builder(context)
-                .addListener(object : Transformer.Listener {
-                    override fun onCompleted(
-                        composition: Composition,
-                        exportResult: ExportResult
-                    ) {
-                        activeTransformer = null
+            val listener = object : Transformer.Listener {
 
-                        if (finished) return
+                override fun onCompleted(
+                    composition: Composition,
+                    exportResult: ExportResult
+                ) {
+                    activeTransformer = null
 
-                        currentIndex++
-                        exportNextClip()
-                    }
+                    if (finished) return
 
-                    override fun onError(
-                        composition: Composition,
-                        exportResult: ExportResult,
-                        exportException: ExportException
-                    ) {
-                        activeTransformer = null
-
-                        onProgress(
-                            "Failed: ${clip.name} — " +
-                                (
-                                    exportException.message
-                                        ?: "Export error"
-                                )
+                    if (!outputFile.exists() || outputFile.length() <= 0L) {
+                        finish(
+                            null,
+                            "Export failed: ${clip.name} produced an empty file."
                         )
-
-                        finish(null)
+                        return
                     }
-                })
-                .build()
 
-                        activeTransformer = transformer
-
-            when {
-                clip.frameLayout in setOf(
-                    "SPLIT_VERTICAL",
-                    "SPLIT_60_40",
-                    "SPLIT_40_60",
-                    "SPLIT_HORIZONTAL"
-                ) || (
-                    clip.frameLayout == "CUSTOM" &&
-                    clip.frames.size > 1
-                ) -> {
-                    exportSplitClip(
-                        transformer = transformer,
-                        mediaItem = mediaItem,
-                        clip = clip,
-                        outputFile = outputFile,
-                        targetRatio = targetRatio
-                    )
+                    currentIndex++
+                    exportNextClip()
                 }
 
-                else -> {
-                    exportSingleClip(
-                        transformer = transformer,
-                        mediaItem = mediaItem,
-                        clip = clip,
-                        outputFile = outputFile,
-                        targetRatio = targetRatio
+                override fun onError(
+                    composition: Composition,
+                    exportResult: ExportResult,
+                    exportException: ExportException
+                ) {
+                    activeTransformer = null
+
+                    finish(
+                        null,
+                        "Failed: ${clip.name} — ${
+                            exportException.message ?: "Export error"
+                        }"
                     )
                 }
             }
+
+            val transformer = Transformer.Builder(context)
+                .addListener(listener)
+                .build()
+
+            activeTransformer = transformer
+
+            if (ClipkaCompositionFactory.isMultiFrameComposition(clip)) {
+                val composition =
+                    ClipkaCompositionFactory.createComposition(
+                        mediaItem = mediaItem,
+                        clip = clip
+                    )
+
+                transformer.start(
+                    composition,
+                    outputFile.absolutePath
+                )
+            } else {
+                val editedItem =
+                    ClipkaCompositionFactory.createSingleEditedItem(
+                        mediaItem = mediaItem,
+                        clip = clip
+                    )
+
+                transformer.start(
+                    editedItem,
+                    outputFile.absolutePath
+                )
+            }
         } catch (error: Exception) {
-            onProgress(
-                "Failed: ${clip.name} — " +
-                    (error.message ?: "Unknown error")
-            )
-            finish(null)
-        }
-    }
-
-    private fun exportSingleClip(
-        transformer: Transformer,
-        mediaItem: MediaItem,
-        clip: ClipSegment,
-        outputFile: File,
-        targetRatio: Float
-    ) {
-        val presentation = Presentation.createForAspectRatio(
-            targetRatio,
-            Presentation.LAYOUT_SCALE_TO_FIT_WITH_CROP
-        )
-
-        val frame = clip.frames.firstOrNull()
-
-        val videoEffects = if (
-    clip.frameLayout in setOf("SINGLE", "CUSTOM") &&
-    frame != null
-) {
-            listOf(
-                createCrop(frame),
-                presentation
-            )
-        } else {
-            listOf(presentation)
-        }
-
-        val editedItem = EditedMediaItem.Builder(mediaItem)
-            .setEffects(
-                Effects(
-                    emptyList(),
-                    videoEffects
-                )
-            )
-            .build()
-
-        transformer.start(
-            editedItem,
-            outputFile.absolutePath
-        )
-    }
-
-        private fun exportSplitClip(
-        transformer: Transformer,
-        mediaItem: MediaItem,
-        clip: ClipSegment,
-        outputFile: File,
-        targetRatio: Float
-    ) {
-        if (clip.frames.size < 2) {
-            throw IllegalArgumentException(
-                "Split-screen export needs at least two frame regions."
+            finish(
+                null,
+                "Failed: ${clip.name} — ${
+                    error.message ?: "Unknown error"
+                }"
             )
         }
-
-        val videoSequences = clip.frames.map { frame ->
-            val videoItem = createVideoItem(
-                mediaItem,
-                frame
-            )
-
-            EditedMediaItemSequence(
-                listOf(videoItem)
-            )
-        }
-
-        val audioItem = EditedMediaItem.Builder(mediaItem)
-            .setRemoveVideo(true)
-            .build()
-
-        val audioSequence = EditedMediaItemSequence(
-            listOf(audioItem)
-        )
-
-        val allSequences = videoSequences + audioSequence
-
-        val composition = Composition.Builder(allSequences)
-            .setVideoCompositorSettings(
-                SplitScreenCompositorSettings(
-                    frames = clip.frames,
-                    aspectRatio = clip.aspectRatio
-                )
-            )
-            .build()
-
-        transformer.start(
-            composition,
-            outputFile.absolutePath
-        )
     }
 
     private fun createZip() {
         if (finished) return
 
+        var zipFile: File? = null
+
         try {
-            val zipFile = File(
+            val output = File(
                 context.cacheDir,
                 "Clipka_Clips_${System.currentTimeMillis()}.zip"
             )
+            zipFile = output
 
             ZipOutputStream(
-                FileOutputStream(zipFile)
+                FileOutputStream(output)
             ).use { zip ->
                 tempFiles.forEachIndexed { index, file ->
-                    if (!file.exists() || file.length() == 0L) {
+                    if (!file.exists() || file.length() <= 0L) {
                         throw IllegalStateException(
-                            "Exported clip file is missing or empty."
+                            "Clip ${index + 1} is missing or empty."
                         )
                     }
 
                     val clip = clips[index]
-
                     val safeName = clip.name
                         .replace(Regex("[^A-Za-z0-9_-]"), "_")
                         .ifBlank { "Clip_${index + 1}" }
@@ -361,30 +211,44 @@ if (
                 }
             }
 
-            finish(zipFile)
+            if (!output.exists() || output.length() <= 0L) {
+                throw IllegalStateException("ZIP file is empty.")
+            }
+
+            finish(
+                output,
+                "ZIP ready: ${clips.size} clips exported."
+            )
         } catch (error: Exception) {
-            onProgress(
+            zipFile?.delete()
+
+            finish(
+                null,
                 "ZIP failed: ${error.message ?: "Unknown error"}"
             )
-            finish(null)
         }
     }
 
-    private fun finish(result: File?) {
+    private fun postProgress(message: String) {
+        handler.post {
+            if (!finished) {
+                onProgress(message)
+            }
+        }
+    }
+
+    private fun finish(
+        result: File?,
+        message: String
+    ) {
         if (finished) return
-
         finished = true
-        activeTransformer = null
 
+        activeTransformer = null
         tempFiles.forEach { it.delete() }
 
         handler.post {
-            if (result != null) {
-                onProgress(
-                    "ZIP ready: ${clips.size} clips exported."
-                )
-            }
-
+            onProgress(message)
             onComplete(result)
         }
     }
@@ -395,9 +259,10 @@ if (
         try {
             activeTransformer?.cancel()
         } catch (_: Exception) {
-            // Continue with cleanup if cancellation throws.
+            // Continue cleanup.
         }
 
-        finish(null)
+        activeTransformer = null
+        finish(null, "Export cancelled.")
     }
 }
