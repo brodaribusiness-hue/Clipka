@@ -279,6 +279,8 @@ outputHeight = frameObject.optDouble("outputHeight", 1.0).toFloat(),
                 brightness = clipObject.optDouble("brightness", 0.0).toFloat(),
                 contrast = clipObject.optDouble("contrast", 0.0).toFloat(),
                 saturation = clipObject.optDouble("saturation", 0.0).toFloat()
+            )
+
             if (clip.validate() is ClipValidationResult.Valid) {
                 loadedClips.add(clip)
             }
