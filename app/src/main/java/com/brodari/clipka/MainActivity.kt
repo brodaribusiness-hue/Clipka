@@ -697,6 +697,15 @@ private fun EditorScreen(
                 ?: project?.clips?.firstOrNull()?.id
         )
     }
+    var selectedFrameId by remember(project?.id) {
+    mutableStateOf(
+        project?.clips
+            ?.firstOrNull { it.id == project.selectedClipId }
+            ?.frames
+            ?.firstOrNull()
+            ?.id
+    )
+}
 
     var nextClipNumber by remember(project?.id) {
         mutableIntStateOf((project?.clips?.size ?: 0) + 1)
@@ -1145,118 +1154,98 @@ private fun EditorScreen(
                     modifier = Modifier.size(50.dp)
                 )
             }
-                        val cropFrame = clips
-                .firstOrNull { it.id == selectedClipId }
-                ?.frames
-                ?.singleOrNull()
+                        val cropFrames = clips
+    .firstOrNull { it.id == selectedClipId }
+    ?.frames
+    ?: emptyList()
 
-            if (toolMode == ToolMode.CROP && cropFrame != null) {
-                Canvas(
-                    modifier = Modifier
-    .fillMaxSize()
-    .pointerInput(toolMode, selectedClipId) {
-        detectDragGestures(
-            onDragStart = {
-                saveUndoState()
-            },
-            onDrag = { change, dragAmount ->
-                change.consume()
+val activeFrame = cropFrames.firstOrNull {
+    it.id == selectedFrameId
+} ?: cropFrames.firstOrNull()
 
-                if (size.width <= 0 || size.height <= 0) {
-                    return@detectDragGestures
-                }
+if (toolMode == ToolMode.CROP && activeFrame != null) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(
+                toolMode,
+                selectedClipId,
+                selectedFrameId
+            ) {
+                var dragX = 0f
+                var dragY = 0f
+                var initialX = 0f
+                var initialY = 0f
 
-                val dx = dragAmount.x / size.width.toFloat()
-                val dy = dragAmount.y / size.height.toFloat()
+                detectDragGestures(
+                    onDragStart = {
+                        dragX = 0f
+                        dragY = 0f
+                        initialX = activeFrame.x
+                        initialY = activeFrame.y
+                        saveUndoState()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
 
-                clips = clips.map { clip ->
-                    if (clip.id != selectedClipId) {
-                        clip
-                    } else {
-                        val frame = clip.frames.singleOrNull()
-                            ?: return@map clip
+                        if (size.width <= 0 || size.height <= 0) {
+                            return@detectDragGestures
+                        }
 
-                        val newX = (frame.x + dx)
-                            .coerceIn(0f, 1f - frame.width)
-                        val newY = (frame.y + dy)
-                            .coerceIn(0f, 1f - frame.height)
+                        dragX += dragAmount.x / size.width.toFloat()
+                        dragY += dragAmount.y / size.height.toFloat()
 
-                        clip.copy(
-                            frames = listOf(
-                                frame.copy(
-                                    x = newX,
-                                    y = newY,
-                                    name = "Crop"
+                        val newX = (initialX + dragX)
+                            .coerceIn(0f, 1f - activeFrame.width)
+
+                        val newY = (initialY + dragY)
+                            .coerceIn(0f, 1f - activeFrame.height)
+
+                        clips = clips.map { clip ->
+                            if (clip.id != selectedClipId) {
+                                clip
+                            } else {
+                                clip.copy(
+                                    frames = clip.frames.map { frame ->
+                                        if (frame.id == activeFrame.id) {
+                                            frame.copy(
+                                                x = newX,
+                                                y = newY
+                                            )
+                                        } else {
+                                            frame
+                                        }
+                                    },
+                                    frameLayout = "CUSTOM"
                                 )
-                            ),
-                            frameLayout = "CUSTOM"
-                        )
+                            }
+                        }
                     }
-                }
+                )
             }
-        )
-    }
-                ) {
-                    val left = cropFrame.x * size.width
-                    val top = cropFrame.y * size.height
-                    val right = (cropFrame.x + cropFrame.width) * size.width
-                    val bottom = (cropFrame.y + cropFrame.height) * size.height
+    ) {
+        cropFrames.forEach { frame ->
+            val left = frame.x * size.width
+            val top = frame.y * size.height
+            val right = (frame.x + frame.width) * size.width
+            val bottom = (frame.y + frame.height) * size.height
 
-                    val shade = Color.Black.copy(alpha = 0.55f)
+            val isSelected = frame.id == activeFrame.id
 
-                    // Darken the area above the crop frame.
-                    drawRect(
-                        color = shade,
-                        topLeft = androidx.compose.ui.geometry.Offset(0f, 0f),
-                        size = androidx.compose.ui.geometry.Size(
-                            size.width,
-                            top
-                        )
-                    )
-
-                    // Darken the area below the crop frame.
-                    drawRect(
-                        color = shade,
-                        topLeft = androidx.compose.ui.geometry.Offset(0f, bottom),
-                        size = androidx.compose.ui.geometry.Size(
-                            size.width,
-                            (size.height - bottom).coerceAtLeast(0f)
-                        )
-                    )
-
-                    // Darken the left outside area.
-                    drawRect(
-                        color = shade,
-                        topLeft = androidx.compose.ui.geometry.Offset(0f, top),
-                        size = androidx.compose.ui.geometry.Size(
-                            left,
-                            (bottom - top).coerceAtLeast(0f)
-                        )
-                    )
-
-                    // Darken the right outside area.
-                    drawRect(
-                        color = shade,
-                        topLeft = androidx.compose.ui.geometry.Offset(right, top),
-                        size = androidx.compose.ui.geometry.Size(
-                            (size.width - right).coerceAtLeast(0f),
-                            (bottom - top).coerceAtLeast(0f)
-                        )
-                    )
-
-                    // Highlight the selected crop boundary.
-                    drawRect(
-                        color = Accent,
-                        topLeft = androidx.compose.ui.geometry.Offset(left, top),
-                        size = androidx.compose.ui.geometry.Size(
-                            right - left,
-                            bottom - top
-                        ),
-                        style = Stroke(width = 3.dp.toPx())
-                    )
-                }
-            }
+            drawRect(
+                color = if (isSelected) Accent else Color.White,
+                topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                size = androidx.compose.ui.geometry.Size(
+                    right - left,
+                    bottom - top
+                ),
+                style = Stroke(
+                    width = if (isSelected) 4.dp.toPx() else 2.dp.toPx()
+                )
+            )
         }
+    }
+}
 
         Spacer(Modifier.height(7.dp))
 
