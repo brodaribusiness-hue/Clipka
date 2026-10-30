@@ -691,22 +691,24 @@ private fun EditorScreen(
         mutableStateOf(project?.clips ?: emptyList())
     }
 
-    var selectedClipId by remember(project?.id) {
+        var selectedClipId by remember(project?.id) {
         mutableStateOf(
             project?.selectedClipId
-                ?.takeIf { id -> project.clips.any { it.id == id } }
+                ?.takeIf { id ->
+                    project?.clips?.any { it.id == id } == true
+                }
                 ?: project?.clips?.firstOrNull()?.id
         )
     }
-    var selectedFrameId by remember(project?.id) {
-    mutableStateOf(
-        project?.clips
-            ?.firstOrNull { it.id == project.selectedClipId }
-            ?.frames
-            ?.firstOrNull()
-            ?.id
-    )
-}
+            var selectedFrameId by remember(project?.id) {
+        mutableStateOf(
+            project?.clips
+                ?.firstOrNull { it.id == project?.selectedClipId }
+                ?.frames
+                ?.firstOrNull()
+                ?.id
+        )
+    }
 
     var nextClipNumber by remember(project?.id) {
         mutableIntStateOf((project?.clips?.size ?: 0) + 1)
@@ -1388,108 +1390,7 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
     }
 }
 
-                ToolMode.OUTPUT -> {
-                    ToolButton(
-                        label = "Back",
-                        icon = Icons.Default.ArrowBack,
-                        onClick = {
-                            toolMode = ToolMode.EDIT
-                        }
-                    )
-
-                    clips.firstOrNull {
-                        it.id == selectedClipId
-                    }?.frames?.forEach { frame ->
-                        ToolButton(
-                            label = frame.name,
-                            icon = Icons.Default.Face,
-                            active = frame.id == selectedFrameId,
-                            onClick = {
-                                selectedFrameId = frame.id
-                            }
-                        )
-                    }
-
-                    ToolButton(
-                        label = "Left",
-                        icon = Icons.Default.ArrowLeft,
-                        onClick = {
-                            updateSelectedFramePlacement(dx = -0.05f)
-                        }
-                    )
-
-                    ToolButton(
-                        label = "Right",
-                        icon = Icons.Default.ArrowRight,
-                        onClick = {
-                            updateSelectedFramePlacement(dx = 0.05f)
-                        }
-                    )
-
-                    ToolButton(
-                        label = "Up",
-                        icon = Icons.Default.ArrowUpward,
-                        onClick = {
-                            updateSelectedFramePlacement(dy = -0.05f)
-                        }
-                    )
-
-                    ToolButton(
-                        label = "Down",
-                        icon = Icons.Default.ArrowDownward,
-                        onClick = {
-                            updateSelectedFramePlacement(dy = 0.05f)
-                        }
-                    )
-
-                    ToolButton(
-                        label = "Wider",
-                        icon = Icons.Default.ZoomIn,
-                        onClick = {
-                            updateSelectedFramePlacement(dw = 0.05f)
-                        }
-                    )
-
-                    ToolButton(
-                        label = "Narrow",
-                        icon = Icons.Default.ZoomOut,
-                        onClick = {
-                            updateSelectedFramePlacement(dw = -0.05f)
-                        }
-                    )
-
-                    ToolButton(
-                        label = "Taller",
-                        icon = Icons.Default.ZoomIn,
-                        onClick = {
-                            updateSelectedFramePlacement(dh = 0.05f)
-                        }
-                    )
-
-                    ToolButton(
-                        label = "Shorter",
-                        icon = Icons.Default.ZoomOut,
-                        onClick = {
-                            updateSelectedFramePlacement(dh = -0.05f)
-                        }
-                    )
-
-                    ToolButton(
-                        label = "Delete",
-                        icon = Icons.Default.Delete,
-                        onClick = {
-                            deleteSelectedFrame()
-                        }
-                    )
-                }
-
-                ToolMode.PREVIEW -> {
-                    // PreviewScreen is displayed by the early return above.
-                }
-            }
-        }
-    }
-}
+                
 
                     if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
                 Canvas(
@@ -2531,20 +2432,6 @@ if (toolMode == ToolMode.CROP && activeFrame != null) {
                     )
                 }
 
-
-    clips.firstOrNull { it.id == selectedClipId }
-        ?.frames
-        ?.forEach { frame ->
-            ToolButton(
-                label = frame.name,
-                icon = Icons.Default.Face,
-                active = frame.id == selectedFrameId,
-                onClick = {
-                    selectedFrameId = frame.id
-                }
-            )
-        }
-}
 
                                 ToolMode.PREVIEW -> {
                     // PreviewScreen is displayed by the early return above.
