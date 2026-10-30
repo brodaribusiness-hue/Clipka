@@ -2379,6 +2379,7 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
         }
     }
 )
+                } 
 
                                         ToolButton(
                         label = "Adjust",
