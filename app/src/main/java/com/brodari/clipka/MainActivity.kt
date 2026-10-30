@@ -79,7 +79,7 @@ private enum class Screen {
 }
 
 private enum class ToolMode {
-    MAIN, EDIT, CROP, PREVIEW
+    MAIN, EDIT, CROP, OUTPUT, PREVIEW
 }
 
 private data class SplitTemplate(
