@@ -176,8 +176,11 @@ object ClipProjectStorage {
                     put("name", clip.name)
                     put("startMs", clip.startMs)
                     put("endMs", clip.endMs)
-                    put("aspectRatio", clip.aspectRatio)
+                                        put("aspectRatio", clip.aspectRatio)
                     put("frameLayout", clip.frameLayout)
+                                        put("brightness", clip.brightness.toDouble())
+                    put("contrast", clip.contrast.toDouble())
+                    put("saturation", clip.saturation.toDouble())
 
                     put("frames", JSONArray().apply {
                         clip.frames.forEach { frame ->
@@ -272,9 +275,10 @@ outputHeight = frameObject.optDouble("outputHeight", 1.0).toFloat(),
                 endMs = clipObject.optLong("endMs", 30_000L),
                 aspectRatio = clipObject.optString("aspectRatio", "9:16"),
                 frames = loadedFrames,
-                frameLayout = clipObject.optString("frameLayout", "SINGLE")
-            )
-
+                                frameLayout = clipObject.optString("frameLayout", "SINGLE"),
+                brightness = clipObject.optDouble("brightness", 0.0).toFloat(),
+                contrast = clipObject.optDouble("contrast", 0.0).toFloat(),
+                saturation = clipObject.optDouble("saturation", 0.0).toFloat()
             if (clip.validate() is ClipValidationResult.Valid) {
                 loadedClips.add(clip)
             }
