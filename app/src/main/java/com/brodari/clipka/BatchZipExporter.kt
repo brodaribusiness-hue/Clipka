@@ -323,9 +323,9 @@ val audioSequence =
         )
             .setVideoCompositorSettings(
                 SplitScreenCompositorSettings(
-                    layout = clip.frameLayout,
-                    aspectRatio = clip.aspectRatio
-                )
+    frames = clip.frames,
+    aspectRatio = clip.aspectRatio
+)
             )
             .build()
 
