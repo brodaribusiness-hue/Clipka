@@ -31,9 +31,9 @@ object ClipkaCompositionFactory {
         "SPLIT_HORIZONTAL"
     )
 
-    fun isMultiFrameComposition(clip: ClipSegment): Boolean {
+        fun isMultiFrameComposition(clip: ClipSegment): Boolean {
         return clip.frameLayout in splitLayouts ||
-            (clip.frameLayout == "CUSTOM" && clip.frames.size > 1)
+            (clip.frameLayout == "CUSTOM" && clip.frames.isNotEmpty())
     }
 
     fun validateForComposition(clip: ClipSegment): String? {
@@ -47,7 +47,10 @@ object ClipkaCompositionFactory {
             return "Diagonal masking is not implemented yet."
         }
 
-        if (isMultiFrameComposition(clip) && clip.frames.size < 2) {
+                if (
+            clip.frameLayout in splitLayouts &&
+            clip.frames.size < 2
+        ) {
             return "A split composition needs at least two speaker frames."
         }
 
