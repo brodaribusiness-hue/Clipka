@@ -190,9 +190,10 @@ private data class EditorSnapshot(
     val clips: List<ClipSegment>,
     val selectedClipId: String?,
     val selectedFrameId: String?,
-    val nextClipNumber: Int,
+        val nextClipNumber: Int,
     val startTime: String,
-    val endTime: String
+    val endTime: String,
+    val selectedTemplate: Int
 )
 
 @Composable
@@ -728,10 +729,10 @@ private fun EditorScreen(
         clips = clips.toList(),
         selectedClipId = selectedClipId,
         selectedFrameId = selectedFrameId,
-        nextClipNumber = nextClipNumber,
+                nextClipNumber = nextClipNumber,
         startTime = startTime,
-        endTime = endTime
-    )
+        endTime = endTime,
+        selectedTemplate = selectedTemplate
 
     fun saveUndoState() {
         undoStack.add(currentSnapshot())
@@ -758,10 +759,11 @@ private fun EditorScreen(
         clips = previous.clips
         selectedClipId = previous.selectedClipId
         selectedFrameId = previous.selectedFrameId
-        nextClipNumber = previous.nextClipNumber
+                nextClipNumber = previous.nextClipNumber
         startTime = previous.startTime
         endTime = previous.endTime
-    }
+        selectedTemplate = previous.selectedTemplate
+    }    
 
     fun redoEdit() {
         if (redoStack.isEmpty()) {
@@ -778,9 +780,10 @@ private fun EditorScreen(
         clips = next.clips
         selectedClipId = next.selectedClipId
         selectedFrameId = next.selectedFrameId
-        nextClipNumber = next.nextClipNumber
+                nextClipNumber = next.nextClipNumber
         startTime = next.startTime
         endTime = next.endTime
+        selectedTemplate = next.selectedTemplate
     }
 
     
