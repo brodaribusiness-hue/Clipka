@@ -1610,35 +1610,56 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
 Row(
     modifier = Modifier
         .fillMaxWidth()
-        .height(48.dp),
+        .height(42.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(5.dp)
 ) {
+    Button(
+        onClick = { addClipFromRange() },
+        modifier = Modifier
+            .width(82.dp)
+            .height(34.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Accent,
+            contentColor = Color(0xFF171914)
+        )
+    ) {
+        Icon(
+            Icons.Default.Add,
+            contentDescription = null,
+            modifier = Modifier.size(15.dp)
+        )
+        Spacer(Modifier.width(2.dp))
+        Text("Add Clip", fontSize = 10.sp, maxLines = 1)
+    }
+
     OutlinedButton(
         onClick = { stretch = !stretch },
         modifier = Modifier
-            .weight(1.35f)
-            .fillMaxHeight(),
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        shape = RoundedCornerShape(10.dp)
+            .weight(1f)
+            .height(34.dp),
+        contentPadding = PaddingValues(horizontal = 3.dp),
+        shape = RoundedCornerShape(8.dp)
     ) {
         Icon(
             if (stretch) Icons.Default.FullscreenExit
             else Icons.Default.Fullscreen,
             contentDescription = null,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
-        Spacer(Modifier.width(3.dp))
+        Spacer(Modifier.width(2.dp))
         Text(
             if (stretch) "Fit" else "Stretch",
-            fontSize = 11.sp,
+            fontSize = 10.sp,
             maxLines = 1
         )
     }
 
     FilledIconButton(
         onClick = onPlayPause,
-        modifier = Modifier.size(43.dp),
+        modifier = Modifier.size(36.dp),
         colors = IconButtonDefaults.filledIconButtonColors(
             containerColor = Accent,
             contentColor = Color(0xFF171914)
@@ -1648,38 +1669,13 @@ Row(
             if (playing) Icons.Default.Pause
             else Icons.Default.PlayArrow,
             contentDescription = "Play/Pause",
-            modifier = Modifier.size(26.dp)
-        )
-    }
-
-    Button(
-        onClick = { addClipFromRange() },
-        modifier = Modifier
-            .weight(1.2f)
-            .fillMaxHeight(),
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        shape = RoundedCornerShape(10.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Accent,
-            contentColor = Color(0xFF171914)
-        )
-    ) {
-        Icon(
-            Icons.Default.Add,
-            contentDescription = null,
-            modifier = Modifier.size(17.dp)
-        )
-        Spacer(Modifier.width(3.dp))
-        Text(
-            "Add Clip",
-            fontSize = 11.sp,
-            maxLines = 1
+            modifier = Modifier.size(22.dp)
         )
     }
 
     IconButton(
         onClick = { undoEdit() },
-        modifier = Modifier.size(38.dp)
+        modifier = Modifier.size(32.dp)
     ) {
         Icon(
             Icons.Default.Undo,
@@ -1690,7 +1686,7 @@ Row(
 
     IconButton(
         onClick = { redoEdit() },
-        modifier = Modifier.size(38.dp)
+        modifier = Modifier.size(32.dp)
     ) {
         Icon(
             Icons.Default.Redo,
