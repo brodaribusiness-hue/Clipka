@@ -75,7 +75,10 @@ data class ClipSegment(
     val endMs: Long,
     val aspectRatio: String = "9:16",
     val frames: List<FrameRegion> = emptyList(),
-    val frameLayout: String = "SINGLE"
+    val frameLayout: String = "SINGLE",
+    val brightness: Float = 0f,
+    val contrast: Float = 0f,
+    val saturation: Float = 0f
 ) {
     val durationMs: Long
         get() = endMs - startMs
@@ -110,6 +113,17 @@ data class ClipSegment(
             if (frameError != null) {
                 return ClipValidationResult.Invalid("${frame.name}: $frameError")
             }
+        }
+                if (!brightness.isFinite() || brightness !in -1f..1f) {
+            return ClipValidationResult.Invalid("Invalid brightness value.")
+        }
+
+        if (!contrast.isFinite() || contrast !in -1f..1f) {
+            return ClipValidationResult.Invalid("Invalid contrast value.")
+        }
+
+        if (!saturation.isFinite() || saturation !in -100f..100f) {
+            return ClipValidationResult.Invalid("Invalid saturation value.")
         }
 
         if (frameLayout in setOf(
