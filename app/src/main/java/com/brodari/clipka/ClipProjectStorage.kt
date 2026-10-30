@@ -188,6 +188,12 @@ object ClipProjectStorage {
                                 put("y", frame.y.toDouble())
                                 put("width", frame.width.toDouble())
                                 put("height", frame.height.toDouble())
+                                
+put("outputX", frame.outputX.toDouble())
+put("outputY", frame.outputY.toDouble())
+put("outputWidth", frame.outputWidth.toDouble())
+put("outputHeight", frame.outputHeight.toDouble())
+
                                 put("detectedFace", frame.detectedFace)
                                 put(
                                     "detectionConfidence",
@@ -243,6 +249,12 @@ object ClipProjectStorage {
                         y = frameObject.optDouble("y", 0.10).toFloat(),
                         width = frameObject.optDouble("width", 0.50).toFloat(),
                         height = frameObject.optDouble("height", 0.80).toFloat(),
+                        
+outputX = frameObject.optDouble("outputX", 0.0).toFloat(),
+outputY = frameObject.optDouble("outputY", 0.0).toFloat(),
+outputWidth = frameObject.optDouble("outputWidth", 1.0).toFloat(),
+outputHeight = frameObject.optDouble("outputHeight", 1.0).toFloat(),
+
                         detectedFace = frameObject.optBoolean(
                             "detectedFace",
                             false
