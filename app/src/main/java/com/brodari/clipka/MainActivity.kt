@@ -2449,6 +2449,263 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
         ) {
             Text(
                 text = formatTime(positionMs),
+
+@Composable
+private fun PreviewScreen(
+    fileName: String,
+    videoUri: Uri?,
+    player: ExoPlayer,
+    playing: Boolean,
+    selectedClip: ClipSegment?,
+    selectedTemplate: Int,
+    onSelectTemplate: (SplitTemplate) -> Unit,
+    onSelectRatio: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    val context = LocalContext.current
+
+    val previewPlayer = remember(context) {
+        ExoPlayer.Builder(context).build()
+    }
+
+    var previewFile by remember {
+        mutableStateOf<File?>(null)
+    }
+
+    var previewReady by remember {
+        mutableStateOf(false)
+    }
+
+    var previewPlaying by remember {
+        mutableStateOf(false)
+    }
+
+    var previewStatus by remember {
+        mutableStateOf("Preparing preview...")
+    }
+
+    var previewPositionMs by remember {
+        mutableLongStateOf(0L)
+    }
+
+    var previewDurationMs by remember {
+        mutableLongStateOf(1L)
+    }
+
+    var previewRequestId by remember {
+        mutableIntStateOf(0)
+    }
+
+    DisposableEffect(previewPlayer) {
+        val listener = object : Player.Listener {
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                previewPlaying = isPlaying
+            }
+
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == Player.STATE_READY) {
+                    previewReady = true
+                    previewDurationMs =
+                        previewPlayer.duration.coerceAtLeast(1L)
+
+                    previewStatus = "Combined preview ready"
+                }
+
+                if (playbackState == Player.STATE_ENDED) {
+                    previewPlayer.seekTo(0L)
+                    previewPositionMs = 0L
+                }
+            }
+        }
+
+        previewPlayer.addListener(listener)
+
+        onDispose {
+            previewPlayer.removeListener(listener)
+            previewPlayer.release()
+        }
+    }
+
+    DisposableEffect(player, videoUri, selectedClip) {
+        previewRequestId += 1
+        val requestId = previewRequestId
+
+        player.pause()
+        previewPlayer.pause()
+        previewPlayer.clearMediaItems()
+
+        previewFile?.delete()
+        previewFile = null
+
+        previewReady = false
+        previewPlaying = false
+        previewPositionMs = 0L
+        previewDurationMs =
+            selectedClip?.durationMs?.coerceAtLeast(1L) ?: 1L
+
+        var exporter: ClipPreviewExporter? = null
+
+        if (videoUri == null || selectedClip == null) {
+            previewStatus = "Select a clip to generate preview"
+        } else {
+            previewStatus = "Preparing combined composition..."
+
+            exporter = ClipPreviewExporter(
+                context = context.applicationContext,
+                sourceUri = videoUri,
+                clip = selectedClip,
+
+                onProgress = { message ->
+                    if (requestId == previewRequestId) {
+                        previewStatus = message
+                    }
+                },
+
+                onComplete = { file ->
+                    if (requestId != previewRequestId) {
+                        file?.delete()
+                    } else if (file == null) {
+                        previewReady = false
+                    } else {
+                        previewFile = file
+
+                        previewPlayer.setMediaItem(
+                            MediaItem.fromUri(Uri.fromFile(file))
+                        )
+
+                        previewPlayer.prepare()
+                        previewPlayer.seekTo(0L)
+                        previewPositionMs = 0L
+                        previewStatus = "Loading combined preview..."
+                    }
+                }
+            )
+
+            exporter?.start()
+        }
+
+        onDispose {
+            exporter?.cancel()
+            previewPlayer.pause()
+            previewPlayer.clearMediaItems()
+            previewFile?.delete()
+        }
+    }
+
+    LaunchedEffect(previewReady, previewPlaying, previewDurationMs) {
+        while (previewReady && previewPlaying) {
+            val current = previewPlayer.currentPosition
+                .coerceAtLeast(0L)
+
+            if (current >= previewDurationMs) {
+                previewPlayer.pause()
+                previewPlayer.seekTo(0L)
+                previewPositionMs = 0L
+            } else {
+                previewPositionMs = current
+            }
+
+            delay(100L)
+        }
+    }
+
+    val previewAspectRatio = when (selectedClip?.aspectRatio) {
+        "1:1" -> 1f
+        "16:9" -> 16f / 9f
+        else -> 9f / 16f
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppBg)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = {
+                    previewPlayer.pause()
+                    player.pause()
+                    onBack()
+                }
+            ) {
+                Icon(
+                    Icons.Default.ArrowBack,
+                    contentDescription = "Back to editor",
+                    tint = MainText
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp)
+            ) {
+                Text(
+                    text = "Preview",
+                    color = MainText,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+
+                Text(
+                    text = selectedClip?.name ?: fileName,
+                    color = Muted,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .aspectRatio(previewAspectRatio)
+                .background(Color.Black, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (previewReady) {
+                AndroidView(
+                    modifier = Modifier.fillMaxSize(),
+                    factory = { viewContext ->
+                        PlayerView(viewContext).apply {
+                            this.player = previewPlayer
+                            useController = false
+                            resizeMode =
+                                AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        }
+                    },
+                    update = { view ->
+                        view.player = previewPlayer
+                        view.resizeMode =
+                            AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    }
+                )
+            } else {
+                Text(
+                    text = previewStatus,
+                    color = Muted,
+                    fontSize = 13.sp
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = formatTime(previewPositionMs),
                 color = MainText,
                 fontSize = 12.sp
             )
@@ -2456,26 +2713,32 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
             Spacer(Modifier.weight(1f))
 
             Text(
-                text = formatTime(
-                    selectedClip?.endMs ?: player.duration.coerceAtLeast(0L)
-                ),
+                text = formatTime(previewDurationMs),
                 color = Muted,
                 fontSize = 12.sp
             )
         }
 
         Slider(
-            value = positionMs.coerceIn(
-                rangeStart,
-                rangeEnd
-            ).toFloat(),
+            value = previewPositionMs
+                .coerceIn(0L, previewDurationMs)
+                .toFloat(),
             onValueChange = { value ->
-                positionMs = value.toLong()
+                previewPositionMs = value.toLong()
             },
             onValueChangeFinished = {
-                player.seekTo(positionMs.coerceIn(rangeStart, rangeEnd))
+                if (previewReady) {
+                    previewPlayer.seekTo(
+                        previewPositionMs.coerceIn(
+                            0L,
+                            previewDurationMs
+                        )
+                    )
+                }
             },
-            valueRange = sliderMin..sliderMax,
+            valueRange = 0f..previewDurationMs
+                .coerceAtLeast(1L).toFloat(),
+            enabled = previewReady,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(36.dp),
@@ -2485,7 +2748,7 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
                 inactiveTrackColor = Color(0xFF44464D)
             )
         )
-                        // Preview templates and aspect ratios at the bottom
+
         Text(
             text = "SPLIT-SCREEN TEMPLATES",
             color = Muted,
@@ -2543,19 +2806,24 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
         ) {
             FilledIconButton(
                 onClick = {
-                    if (player.isPlaying) {
-                        player.pause()
+                    if (!previewReady) {
+                        return@FilledIconButton
+                    }
+
+                    if (previewPlayer.isPlaying) {
+                        previewPlayer.pause()
                     } else {
-                        val current = player.currentPosition
                         if (
-                            selectedClip != null &&
-                            (current < rangeStart || current >= rangeEnd)
+                            previewPlayer.currentPosition >=
+                            previewDurationMs
                         ) {
-                            player.seekTo(rangeStart)
+                            previewPlayer.seekTo(0L)
                         }
-                        player.play()
+
+                        previewPlayer.play()
                     }
                 },
+                enabled = previewReady,
                 modifier = Modifier.size(50.dp),
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = Accent,
@@ -2563,21 +2831,20 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
                 )
             ) {
                 Icon(
-                    if (playing) Icons.Default.Pause
+                    if (previewPlaying) Icons.Default.Pause
                     else Icons.Default.PlayArrow,
-                    contentDescription = if (playing) "Pause" else "Play",
+                    contentDescription = if (previewPlaying) {
+                        "Pause"
+                    } else {
+                        "Play"
+                    },
                     modifier = Modifier.size(30.dp)
                 )
             }
         }
 
         Text(
-            text = if (selectedClip != null) {
-                "Clip range: ${formatTime(selectedClip.startMs)} – " +
-                    formatTime(selectedClip.endMs)
-            } else {
-                "Full imported video"
-            },
+            text = previewStatus,
             color = Muted,
             fontSize = 11.sp,
             modifier = Modifier
@@ -2586,7 +2853,7 @@ if (selectedClip != null && selectedClip.frames.isNotEmpty()) {
         )
     }
 }
-} 
+
 private fun parseTimeToMs(value: String): Long? {
     val parts = value.trim().split(":")
 
