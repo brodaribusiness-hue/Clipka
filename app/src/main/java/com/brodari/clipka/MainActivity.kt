@@ -981,12 +981,15 @@ private fun EditorScreen(
                 } else {
                     saveUndoState()
 
-                    clips = clips.map { clip ->
+                                        clips = clips.map { clip ->
                         if (clip.id == currentId) {
                             clip.copy(
-    frameLayout = templateLayout(template.id),
-    frames = templateFrames(template.id)
-)
+                                frameLayout = templateLayout(template.id),
+                                frames = applyTemplateToFrames(
+                                    templateId = template.id,
+                                    existingFrames = clip.frames
+                                )
+                            )
                         } else {
                             clip
                         }
