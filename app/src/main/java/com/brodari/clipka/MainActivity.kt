@@ -79,7 +79,7 @@ private enum class Screen {
 }
 
 private enum class ToolMode {
-    MAIN, EDIT, CROP, ZOOM, OUTPUT, PREVIEW
+    MAIN, EDIT, ADJUST, CROP, ZOOM, OUTPUT, PREVIEW
 }
 
 private data class SplitTemplate(
@@ -2380,14 +2380,180 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
     }
 )
 
-                    ToolButton(
+                                        ToolButton(
                         label = "Adjust",
                         icon = Icons.Default.Tune,
                         onClick = {
-                            showMessage(
-                                context,
-                                "Adjust controls will be implemented in Phase 2"
-                            )
+                            if (clips.none {
+                                it.id == selectedClipId
+                            }) {
+                                showMessage(context, "Select a clip first")
+                            } else {
+                                toolMode = ToolMode.ADJUST
+                            }
+                        }
+                    )
+                                ToolMode.ADJUST -> {
+                    val selected = clips.firstOrNull {
+                        it.id == selectedClipId
+                    }
+
+                    ToolButton(
+                        label = "Back",
+                        icon = Icons.Default.ArrowBack,
+                        onClick = {
+                            toolMode = ToolMode.EDIT
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Bright -",
+                        icon = Icons.Default.Remove,
+                        onClick = {
+                            if (selected != null &&
+                                selected.brightness > -1f
+                            ) {
+                                saveUndoState()
+                                clips = clips.map { clip ->
+                                    if (clip.id == selected.id) {
+                                        clip.copy(
+                                            brightness = (
+                                                selected.brightness - 0.05f
+                                            ).coerceAtLeast(-1f)
+                                        )
+                                    } else clip
+                                }
+                            }
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Bright +",
+                        icon = Icons.Default.Add,
+                        onClick = {
+                            if (selected != null &&
+                                selected.brightness < 1f
+                            ) {
+                                saveUndoState()
+                                clips = clips.map { clip ->
+                                    if (clip.id == selected.id) {
+                                        clip.copy(
+                                            brightness = (
+                                                selected.brightness + 0.05f
+                                            ).coerceAtMost(1f)
+                                        )
+                                    } else clip
+                                }
+                            }
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Contrast -",
+                        icon = Icons.Default.Remove,
+                        onClick = {
+                            if (selected != null &&
+                                selected.contrast > -1f
+                            ) {
+                                saveUndoState()
+                                clips = clips.map { clip ->
+                                    if (clip.id == selected.id) {
+                                        clip.copy(
+                                            contrast = (
+                                                selected.contrast - 0.05f
+                                            ).coerceAtLeast(-1f)
+                                        )
+                                    } else clip
+                                }
+                            }
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Contrast +",
+                        icon = Icons.Default.Add,
+                        onClick = {
+                            if (selected != null &&
+                                selected.contrast < 1f
+                            ) {
+                                saveUndoState()
+                                clips = clips.map { clip ->
+                                    if (clip.id == selected.id) {
+                                        clip.copy(
+                                            contrast = (
+                                                selected.contrast + 0.05f
+                                            ).coerceAtMost(1f)
+                                        )
+                                    } else clip
+                                }
+                            }
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Saturation -",
+                        icon = Icons.Default.Remove,
+                        onClick = {
+                            if (selected != null &&
+                                selected.saturation > -100f
+                            ) {
+                                saveUndoState()
+                                clips = clips.map { clip ->
+                                    if (clip.id == selected.id) {
+                                        clip.copy(
+                                            saturation = (
+                                                selected.saturation - 5f
+                                            ).coerceAtLeast(-100f)
+                                        )
+                                    } else clip
+                                }
+                            }
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Saturation +",
+                        icon = Icons.Default.Add,
+                        onClick = {
+                            if (selected != null &&
+                                selected.saturation < 100f
+                            ) {
+                                saveUndoState()
+                                clips = clips.map { clip ->
+                                    if (clip.id == selected.id) {
+                                        clip.copy(
+                                            saturation = (
+                                                selected.saturation + 5f
+                                            ).coerceAtMost(100f)
+                                        )
+                                    } else clip
+                                }
+                            }
+                        }
+                    )
+
+                    ToolButton(
+                        label = "Reset",
+                        icon = Icons.Default.Refresh,
+                        onClick = {
+                            if (selected != null &&
+                                (
+                                    selected.brightness != 0f ||
+                                    selected.contrast != 0f ||
+                                    selected.saturation != 0f
+                                )
+                            ) {
+                                saveUndoState()
+                                clips = clips.map { clip ->
+                                    if (clip.id == selected.id) {
+                                        clip.copy(
+                                            brightness = 0f,
+                                            contrast = 0f,
+                                            saturation = 0f
+                                        )
+                                    } else clip
+                                }
+                            }
                         }
                     )
                 }
