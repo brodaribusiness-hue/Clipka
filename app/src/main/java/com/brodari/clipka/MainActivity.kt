@@ -2394,6 +2394,7 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
                             }
                         }
                     )
+            } 
                                 ToolMode.ADJUST -> {
                     val selected = clips.firstOrNull {
                         it.id == selectedClipId
