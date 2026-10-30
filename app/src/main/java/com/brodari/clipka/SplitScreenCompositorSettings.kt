@@ -1,3 +1,4 @@
+
 package com.brodari.clipka
 
 import androidx.media3.common.OverlaySettings
@@ -8,7 +9,7 @@ import androidx.media3.effect.StaticOverlaySettings
 
 @UnstableApi
 class SplitScreenCompositorSettings(
-    private val layout: String,
+    private val frames: List<FrameRegion>,
     private val aspectRatio: String
 ) : VideoCompositorSettings {
 
@@ -24,59 +25,24 @@ class SplitScreenCompositorSettings(
         inputId: Int,
         presentationTimeUs: Long
     ): OverlaySettings {
-        val settings = StaticOverlaySettings.Builder()
+        val frame = frames.getOrNull(inputId)
+            ?: frames.firstOrNull()
+            ?: FrameRegion()
+
+        val centerX = (2f * frame.outputX) +
+            frame.outputWidth - 1f
+
+        val centerY = 1f -
+            (2f * frame.outputY) -
+            frame.outputHeight
+
+        return StaticOverlaySettings.Builder()
             .setOverlayFrameAnchor(0f, 0f)
-
-        when (layout) {
-            "SPLIT_VERTICAL" -> {
-                settings
-                    .setScale(1f, 0.5f)
-                    .setBackgroundFrameAnchor(
-                        0f,
-                        if (inputId == 0) 0.5f else -0.5f
-                    )
-            }
-
-            "SPLIT_60_40" -> {
-                if (inputId == 0) {
-                    settings
-                        .setScale(1f, 0.6f)
-                        .setBackgroundFrameAnchor(0f, 0.4f)
-                } else {
-                    settings
-                        .setScale(1f, 0.4f)
-                        .setBackgroundFrameAnchor(0f, -0.6f)
-                }
-            }
-
-            "SPLIT_40_60" -> {
-                if (inputId == 0) {
-                    settings
-                        .setScale(1f, 0.4f)
-                        .setBackgroundFrameAnchor(0f, 0.6f)
-                } else {
-                    settings
-                        .setScale(1f, 0.6f)
-                        .setBackgroundFrameAnchor(0f, -0.4f)
-                }
-            }
-
-            "SPLIT_HORIZONTAL" -> {
-                settings
-                    .setScale(0.5f, 1f)
-                    .setBackgroundFrameAnchor(
-                        if (inputId == 0) -0.5f else 0.5f,
-                        0f
-                    )
-            }
-
-            else -> {
-                settings
-                    .setScale(1f, 1f)
-                    .setBackgroundFrameAnchor(0f, 0f)
-            }
-        }
-
-        return settings.build()
+            .setScale(
+                frame.outputWidth,
+                frame.outputHeight
+            )
+            .setBackgroundFrameAnchor(centerX, centerY)
+            .build()
     }
 }
