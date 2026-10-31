@@ -1158,7 +1158,22 @@ private fun EditorScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = onClose,
+                onClick = {
+                    if (clips.isNotEmpty()) {
+                        onSaveProject(
+                            ClipProject(
+                                id = project?.id ?: ClipProject().id,
+                                name = project?.name ?: fileName,
+                                sourceVideoUri = videoUri?.toString(),
+                                sourceDurationMs = player.duration
+                                    .coerceAtLeast(0L),
+                                clips = clips,
+                                selectedClipId = selectedClipId
+                            )
+                        )
+                    }
+                    onClose()
+                },
                 modifier = Modifier.size(38.dp)
             ) {
                 Icon(
@@ -1612,7 +1627,8 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
         }
 
 
-// Preview Box yahan close hoga
+// Preview Box closes here
+}
 }
 
 
@@ -2216,10 +2232,18 @@ Row(
             }
 
             if (
+                parsedEndMs - parsedStartMs <
+                ClipSegment.MIN_CLIP_DURATION_MS
+            ) {
+                showMessage(context, "A clip must be at least 30 seconds")
+                return
+            }
+
+            if (
                 parsedEndMs - parsedStartMs >
                 ClipSegment.MAX_CLIP_DURATION_MS
             ) {
-                showMessage(context, "A clip cannot be longer than 3 minutes")
+                showMessage(context, "A clip cannot be longer than 2 minutes")
                 return
             }
 
@@ -2913,7 +2937,6 @@ Row(
         }
     }
 }
-} 
 } 
 
 @Composable
