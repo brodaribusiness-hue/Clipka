@@ -14,6 +14,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.rememberScrollState
@@ -1138,11 +1139,15 @@ private fun EditorScreen(
         )
         return
     }
+    BoxWithConstraints(
+    modifier = Modifier
+        .fillMaxSize()
+        .background(AppBg)
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppBg)
-            .padding(horizontal = 10.dp, vertical = 5.dp)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
         // Top bar
         Row(
@@ -1217,12 +1222,12 @@ private fun EditorScreen(
 
         // Main video preview stays in place in every tool mode.
                 Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(Color.Black, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(maxHeight * 0.42f)
+        .background(Color.Black, RoundedCornerShape(12.dp)),
+    contentAlignment = Alignment.Center
+) {
             if (videoUri != null) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -1609,14 +1614,13 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
 // Preview Box yahan close hoga
 }
 
-Spacer(Modifier.height(7.dp))
 
-Spacer(Modifier.height(5.dp))
+Spacer(Modifier.height(3.dp))
 
 Row(
     modifier = Modifier
         .fillMaxWidth()
-        .height(42.dp),
+        .height(44.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(5.dp)
 ) {
@@ -1714,11 +1718,11 @@ Row(
         )
 
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Panel, RoundedCornerShape(8.dp))
-                .padding(horizontal = 0.dp, vertical = 3.dp)
-        ) {
+    modifier = Modifier
+        .fillMaxWidth()
+        .background(Panel, RoundedCornerShape(8.dp))
+        .padding(horizontal = 0.dp, vertical = 2.dp)
+) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -1808,12 +1812,12 @@ Row(
         Spacer(Modifier.height(5.dp))
         // Start and end time fields
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(48.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(8.dp)
+) {
             TimeField(
                 label = "START",
                 value = startTime,
@@ -1831,11 +1835,11 @@ Row(
 
         // Real clip timeline
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Panel, RoundedCornerShape(10.dp))
-                .padding(horizontal = 8.dp, vertical = 6.dp)
-        ) {
+    modifier = Modifier
+        .fillMaxWidth()
+        .background(Panel, RoundedCornerShape(10.dp))
+        .padding(horizontal = 6.dp, vertical = 4.dp)
+) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -2246,13 +2250,13 @@ Row(
 
         // One bottom toolbar.
         Row(
-            modifier = Modifier
-    .fillMaxWidth()
-    .height(64.dp)
-    .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(56.dp)
+        .horizontalScroll(rememberScrollState()),
+    horizontalArrangement = Arrangement.spacedBy(5.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
             when (toolMode) {
                 ToolMode.MAIN -> {
                     ToolButton(
