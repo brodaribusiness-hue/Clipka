@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -1786,74 +1787,27 @@ Column(
     )
 }
 
-// 4. SET START / SET END
-Spacer(Modifier.height(4.dp))
-
-Row(
-    modifier = Modifier
-        .fillMaxWidth()
-        .height(34.dp),
-    horizontalArrangement = Arrangement.spacedBy(6.dp),
-    verticalAlignment = Alignment.CenterVertically
-) {
-    OutlinedButton(
-        onClick = {
-            startTime = formatTime(safePositionMs)
-        },
-        modifier = Modifier
-            .weight(1f)
-            .height(30.dp),
-        contentPadding = PaddingValues(horizontal = 3.dp),
-        shape = RoundedCornerShape(7.dp)
-    ) {
-        Text(
-            "Set Start  ${formatTime(safePositionMs)}",
-            fontSize = 9.sp,
-            maxLines = 1
-        )
-    }
-
-    OutlinedButton(
-        onClick = {
-            endTime = formatTime(safePositionMs)
-        },
-        modifier = Modifier
-            .weight(1f)
-            .height(30.dp),
-        contentPadding = PaddingValues(horizontal = 3.dp),
-        shape = RoundedCornerShape(7.dp)
-    ) {
-        Text(
-            "Set End  ${formatTime(safePositionMs)}",
-            fontSize = 9.sp,
-            maxLines = 1
-        )
-    }
-}
-
-        Spacer(Modifier.height(5.dp))
         // Start and end time fields
-        Row(
+      Row(
     modifier = Modifier
         .fillMaxWidth()
-        .height(48.dp),
-    verticalAlignment = Alignment.CenterVertically,
+        .padding(bottom = 6.dp),
+    verticalAlignment = Alignment.Top,
     horizontalArrangement = Arrangement.spacedBy(8.dp)
 ) {
-            TimeField(
-                label = "START",
-                value = startTime,
-                onValueChange = { startTime = it },
-                modifier = Modifier.weight(1f)
-            )
-
-            TimeField(
-                label = "END",
-                value = endTime,
-                onValueChange = { endTime = it },
-                modifier = Modifier.weight(1f)
-            )
-        }
+    TimeField(
+        label = "START",
+        value = startTime,
+        onValueChange = { startTime = it },
+        modifier = Modifier.weight(1f)
+    )
+    TimeField(
+        label = "END",
+        value = endTime,
+        onValueChange = { endTime = it },
+        modifier = Modifier.weight(1f)
+    )
+}
 
         // Real clip timeline
         Column(
@@ -2952,6 +2906,11 @@ private fun PreviewScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+           BackHandler {
+    previewPlayer.pause()
+    player.pause()
+    onBack()
+}
 
     val previewPlayer = remember(context) {
         ExoPlayer.Builder(context).build()
@@ -3107,9 +3066,10 @@ private fun PreviewScreen(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(AppBg)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+    .fillMaxSize()
+    .background(AppBg)
+    .statusBarsPadding()
+    .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Row(
             modifier = Modifier
@@ -3153,39 +3113,41 @@ private fun PreviewScreen(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .aspectRatio(previewAspectRatio)
-                .background(Color.Black, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            if (previewReady) {
-                AndroidView(
-                    modifier = Modifier.fillMaxSize(),
-                    factory = { viewContext ->
-                        PlayerView(viewContext).apply {
-                            this.player = previewPlayer
-                            useController = false
-                            resizeMode =
-                                AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        }
-                    },
-                    update = { view ->
-                        view.player = previewPlayer
-                        view.resizeMode =
-                            AspectRatioFrameLayout.RESIZE_MODE_FIT
+    Box(
+    modifier = Modifier
+        .fillMaxWidth()
+        .weight(1f),
+    contentAlignment = Alignment.Center
+) {
+    Box(
+        modifier = Modifier
+            .aspectRatio(
+                previewAspectRatio,
+                matchHeightConstraintsFirst = previewAspectRatio < 1f
+            )
+            .background(Color.Black, RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (previewReady) {
+            AndroidView(
+                modifier = Modifier.fillMaxSize(),
+                factory = { viewContext ->
+                    PlayerView(viewContext).apply {
+                        this.player = previewPlayer
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     }
-                )
-            } else {
-                Text(
-                    text = previewStatus,
-                    color = Muted,
-                    fontSize = 13.sp
-                )
-            }
+                },
+                update = { view ->
+                    view.player = previewPlayer
+                    view.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
+            )
+        } else {
+            Text(text = previewStatus, color = Muted, fontSize = 13.sp)
         }
+    }
+}
 
         Spacer(Modifier.height(8.dp))
 
@@ -3393,7 +3355,7 @@ private fun TimeField(
                 }.take(8)
             )
         },
-        modifier = modifier.height(52.dp),
+        modifier = modifier.heightIn(min = 56.dp),
         label = {
             Text(label, fontSize = 9.sp)
         },
@@ -3445,6 +3407,41 @@ private fun ToolButton(
             fontSize = 9.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+@Composable
+private fun TemplateButton(
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(84.dp)
+            .fillMaxHeight()
+            .background(
+                if (active) Selected else Panel,
+                RoundedCornerShape(10.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.ViewQuilt,
+            contentDescription = label,
+            tint = if (active) Accent else MainText,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            color = if (active) Accent else MainText,
+            fontSize = 10.sp,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
