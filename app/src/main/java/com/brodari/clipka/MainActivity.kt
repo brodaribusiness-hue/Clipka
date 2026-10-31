@@ -1225,7 +1225,7 @@ private fun EditorScreen(
                 Box(
     modifier = Modifier
         .fillMaxWidth()
-        .height(editorAvailableHeight * 0.42f)
+        .weight(1f)
         .background(Color.Black, RoundedCornerShape(12.dp)),
     contentAlignment = Alignment.Center
 ) {
@@ -1718,97 +1718,102 @@ Row(
             sourceDurationMs
         )
 
-        Column(
+        // 3. ORIGINAL VIDEO SEEK BAR
+Column(
     modifier = Modifier
         .fillMaxWidth()
         .background(Panel, RoundedCornerShape(8.dp))
-        .padding(horizontal = 0.dp, vertical = 2.dp)
+        .padding(horizontal = 6.dp, vertical = 3.dp)
 ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "ORIGINAL VIDEO",
-                    color = Muted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            "ORIGINAL VIDEO",
+            color = Muted,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold
+        )
 
-                Spacer(Modifier.weight(1f))
+        Spacer(Modifier.weight(1f))
 
-                Text(
-                    "${formatTime(safePositionMs)} / " +
-                        formatTime(sourceDurationMs),
-                    color = Accent,
-                    fontSize = 10.sp
-                )
-            }
+        Text(
+            "${formatTime(safePositionMs)} / ${formatTime(sourceDurationMs)}",
+            color = Accent,
+            fontSize = 10.sp
+        )
+    }
 
-            Slider(
-                value = safePositionMs.toFloat(),
-                onValueChange = { value ->
-                    sourcePositionMs = value.toLong()
-                },
-                onValueChangeFinished = {
-                    player.seekTo(
-                        sourcePositionMs.coerceIn(
-                            0L,
-                            sourceDurationMs
-                        )
-                    )
-                },
-                valueRange = 0f..sourceDurationMs.toFloat(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(28.dp),
-                colors = SliderDefaults.colors(
-                    thumbColor = Accent,
-                    activeTrackColor = Accent,
-                    inactiveTrackColor = Color(0xFF44464D)
+    Slider(
+        value = safePositionMs.toFloat(),
+        onValueChange = { value ->
+            sourcePositionMs = value.toLong()
+        },
+        onValueChangeFinished = {
+            player.seekTo(
+                sourcePositionMs.coerceIn(
+                    0L,
+                    sourceDurationMs
                 )
             )
+        },
+        valueRange = 0f..sourceDurationMs.toFloat(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(28.dp),
+        colors = SliderDefaults.colors(
+            thumbColor = Accent,
+            activeTrackColor = Accent,
+            inactiveTrackColor = Color(0xFF44464D)
+        )
+    )
+}
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        startTime = formatTime(safePositionMs)
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(30.dp),
-                    contentPadding = PaddingValues(horizontal = 3.dp),
-                    shape = RoundedCornerShape(7.dp)
-                ) {
-                    Text(
-                        "Set Start  ${formatTime(safePositionMs)}",
-                        fontSize = 9.sp,
-                        maxLines = 1
-                    )
-                }
+// 4. SET START / SET END
+Spacer(Modifier.height(4.dp))
 
-                OutlinedButton(
-                    onClick = {
-                        endTime = formatTime(safePositionMs)
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(30.dp),
-                    contentPadding = PaddingValues(horizontal = 3.dp),
-                    shape = RoundedCornerShape(7.dp)
-                ) {
-                    Text(
-                        "Set End  ${formatTime(safePositionMs)}",
-                        fontSize = 9.sp,
-                        maxLines = 1
-                    )
-                }
-            }
-        }
+Row(
+    modifier = Modifier
+        .fillMaxWidth()
+        .height(34.dp),
+    horizontalArrangement = Arrangement.spacedBy(6.dp),
+    verticalAlignment = Alignment.CenterVertically
+) {
+    OutlinedButton(
+        onClick = {
+            startTime = formatTime(safePositionMs)
+        },
+        modifier = Modifier
+            .weight(1f)
+            .height(30.dp),
+        contentPadding = PaddingValues(horizontal = 3.dp),
+        shape = RoundedCornerShape(7.dp)
+    ) {
+        Text(
+            "Set Start  ${formatTime(safePositionMs)}",
+            fontSize = 9.sp,
+            maxLines = 1
+        )
+    }
+
+    OutlinedButton(
+        onClick = {
+            endTime = formatTime(safePositionMs)
+        },
+        modifier = Modifier
+            .weight(1f)
+            .height(30.dp),
+        contentPadding = PaddingValues(horizontal = 3.dp),
+        shape = RoundedCornerShape(7.dp)
+    ) {
+        Text(
+            "Set End  ${formatTime(safePositionMs)}",
+            fontSize = 9.sp,
+            maxLines = 1
+        )
+    }
+}
 
         Spacer(Modifier.height(5.dp))
         // Start and end time fields
