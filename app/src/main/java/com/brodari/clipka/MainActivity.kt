@@ -1216,12 +1216,13 @@ private fun EditorScreen(
         Spacer(Modifier.height(5.dp))
 
         // Main video preview stays in place in every tool mode.
-        modifier = Modifier
-    .fillMaxWidth()
-    .weight(1f)
-    .background(Color.Black, RoundedCornerShape(12.dp)),
-contentAlignment = Alignment.Center
-             } 
+                Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(Color.Black, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
             if (videoUri != null) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -1701,17 +1702,7 @@ Row(
     }
 }
 
-    IconButton(
-        onClick = { redoEdit() },
-        modifier = Modifier.size(32.dp)
-    ) {
-        Icon(
-            Icons.Default.Redo,
-            contentDescription = "Redo",
-            tint = MainText
-        )
-    }
-}
+    
         Spacer(Modifier.height(6.dp))
 
         
