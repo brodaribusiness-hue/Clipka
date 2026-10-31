@@ -1602,11 +1602,15 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
                 )
             }
         }
-    }
-}
-        Spacer(Modifier.height(7.dp))
+        }
 
-                // Playback controls
+
+// Preview Box yahan close hoga
+}
+
+Spacer(Modifier.height(7.dp))
+
+// Playback controls
 Row(
     modifier = Modifier
         .fillMaxWidth()
