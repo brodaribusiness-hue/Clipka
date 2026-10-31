@@ -1230,6 +1230,7 @@ private fun EditorScreen(
                         PlayerView(viewContext).apply {
                             this.player = player
                             useController = false
+                                   setEnableComposeSurfaceSyncWorkaround(true)
                             resizeMode = if (stretch) {
                                 AspectRatioFrameLayout.RESIZE_MODE_FILL
                             } else {
@@ -3381,7 +3382,7 @@ private fun ToolButton(
 ) {
     Column(
         modifier = Modifier
-            .width(70.dp)
+            .width(58.dp)
             .fillMaxHeight()
             .background(
                 if (active) Selected else Panel,
