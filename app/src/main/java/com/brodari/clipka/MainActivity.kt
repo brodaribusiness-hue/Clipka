@@ -1717,7 +1717,7 @@ Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Panel, RoundedCornerShape(8.dp))
-                .padding(horizontal = 8.dp, vertical = 3.dp)
+                .padding(horizontal = 0.dp, vertical = 3.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
