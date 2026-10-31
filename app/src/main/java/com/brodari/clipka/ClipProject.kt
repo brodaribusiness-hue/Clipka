@@ -145,7 +145,8 @@ data class ClipSegment(
     }
 
     companion object {
-        const val MAX_CLIP_DURATION_MS = 180_000L
+    const val MIN_CLIP_DURATION_MS = 30_000L
+    const val MAX_CLIP_DURATION_MS = 180_000L
 
         val SUPPORTED_ASPECT_RATIOS = setOf("9:16", "1:1", "16:9")
 
