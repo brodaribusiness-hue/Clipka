@@ -1216,13 +1216,12 @@ private fun EditorScreen(
         Spacer(Modifier.height(5.dp))
 
         // Main video preview stays in place in every tool mode.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .background(Color.Black, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
+        modifier = Modifier
+    .fillMaxWidth()
+    .weight(1f)
+    .background(Color.Black, RoundedCornerShape(12.dp)),
+contentAlignment = Alignment.Center
+             } 
             if (videoUri != null) {
                 AndroidView(
                     modifier = Modifier.fillMaxSize(),
@@ -1611,7 +1610,8 @@ if (toolMode == ToolMode.OUTPUT && activeFrame != null) {
 
 Spacer(Modifier.height(7.dp))
 
-// Playback controls
+Spacer(Modifier.height(5.dp))
+
 Row(
     modifier = Modifier
         .fillMaxWidth()
@@ -1619,27 +1619,6 @@ Row(
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(5.dp)
 ) {
-    Button(
-        onClick = { addClipFromRange() },
-        modifier = Modifier
-            .width(82.dp)
-            .height(34.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Accent,
-            contentColor = Color(0xFF171914)
-        )
-    ) {
-        Icon(
-            Icons.Default.Add,
-            contentDescription = null,
-            modifier = Modifier.size(15.dp)
-        )
-        Spacer(Modifier.width(2.dp))
-        Text("Add Clip", fontSize = 10.sp, maxLines = 1)
-    }
-
     OutlinedButton(
         onClick = { stretch = !stretch },
         modifier = Modifier
@@ -1660,6 +1639,27 @@ Row(
             fontSize = 10.sp,
             maxLines = 1
         )
+    }
+
+    Button(
+        onClick = { addClipFromRange() },
+        modifier = Modifier
+            .width(82.dp)
+            .height(34.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Accent,
+            contentColor = Color(0xFF171914)
+        )
+    ) {
+        Icon(
+            Icons.Default.Add,
+            contentDescription = null,
+            modifier = Modifier.size(15.dp)
+        )
+        Spacer(Modifier.width(2.dp))
+        Text("Add Clip", fontSize = 10.sp, maxLines = 1)
     }
 
     FilledIconButton(
@@ -1700,30 +1700,21 @@ Row(
         )
     }
 }
+
+    IconButton(
+        onClick = { redoEdit() },
+        modifier = Modifier.size(32.dp)
+    ) {
+        Icon(
+            Icons.Default.Redo,
+            contentDescription = "Redo",
+            tint = MainText
+        )
+    }
+}
         Spacer(Modifier.height(6.dp))
 
-        // Start and end time fields
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            TimeField(
-                label = "START",
-                value = startTime,
-                onValueChange = { startTime = it },
-                modifier = Modifier.weight(1f)
-            )
-
-            TimeField(
-                label = "END",
-                value = endTime,
-                onValueChange = { endTime = it },
-                modifier = Modifier.weight(1f)
-            )
-        }
+        
                 // Full imported source video timeline (separate from clip cards)
         val sourceDurationMs = player.duration.coerceAtLeast(1L)
         val safePositionMs = sourcePositionMs.coerceIn(
@@ -1824,6 +1815,28 @@ Row(
         }
 
         Spacer(Modifier.height(5.dp))
+        // Start and end time fields
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            TimeField(
+                label = "START",
+                value = startTime,
+                onValueChange = { startTime = it },
+                modifier = Modifier.weight(1f)
+            )
+
+            TimeField(
+                label = "END",
+                value = endTime,
+                onValueChange = { endTime = it },
+                modifier = Modifier.weight(1f)
+            )
+        }
 
         // Real clip timeline
         Column(
@@ -2243,9 +2256,9 @@ Row(
         // One bottom toolbar.
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(70.dp)
-                .horizontalScroll(rememberScrollState()),
+    .fillMaxWidth()
+    .height(64.dp)
+    .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
