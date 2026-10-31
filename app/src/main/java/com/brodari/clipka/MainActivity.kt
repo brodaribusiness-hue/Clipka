@@ -1144,6 +1144,7 @@ private fun EditorScreen(
         .fillMaxSize()
         .background(AppBg)
 ) {
+              val editorAvailableHeight = maxHeight 
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -1224,7 +1225,7 @@ private fun EditorScreen(
                 Box(
     modifier = Modifier
         .fillMaxWidth()
-        .height(maxHeight * 0.42f)
+        .height(editorAvailableHeight * 0.42f)
         .background(Color.Black, RoundedCornerShape(12.dp)),
     contentAlignment = Alignment.Center
 ) {
@@ -2908,7 +2909,7 @@ Row(
     }
 }
 } 
-
+} 
 
 @Composable
 private fun PreviewScreen(
