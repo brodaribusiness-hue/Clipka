@@ -2906,11 +2906,7 @@ private fun PreviewScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-           BackHandler {
-    previewPlayer.pause()
-    player.pause()
-    onBack()
-}
+
 
     val previewPlayer = remember(context) {
         ExoPlayer.Builder(context).build()
@@ -3056,6 +3052,11 @@ private fun PreviewScreen(
 
             delay(100L)
         }
+    }
+    BackHandler {
+    previewPlayer.pause()
+    player.pause()
+    onBack()
     }
 
     val previewAspectRatio = when (selectedClip?.aspectRatio) {
