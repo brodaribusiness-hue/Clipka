@@ -113,50 +113,84 @@ private fun templateLayout(id: Int): String {
 }
 
 
-private fun templateFrames(id: Int): List<FrameRegion> {
-    fun frame(
-        name: String,
-        outputX: Float,
-        outputY: Float,
-        outputWidth: Float,
-        outputHeight: Float
-    ) = FrameRegion(
+private fun canvasAspectOf(ratio: String?): Float = when (ratio) {
+    "1:1" -> 1f
+    "16:9" -> 16f / 9f
+    else -> 9f / 16f
+}
+
+// Crop ka pixel aspect output frame ke barabar rakhta hai,
+// taake frame bina bars aur bina stretch ke bhare.
+private fun fitCrop(
+    name: String,
+    videoAspect: Float,
+    canvasAspect: Float,
+    outputX: Float,
+    outputY: Float,
+    outputWidth: Float,
+    outputHeight: Float,
+    centerX: Float,
+    centerY: Float = 0.5f
+): FrameRegion {
+    val targetAspect = (outputWidth * canvasAspect) / outputHeight
+    var h = 1f
+    var w = targetAspect / videoAspect
+    if (w > 1f) {
+        w = 1f
+        h = videoAspect / targetAspect
+    }
+    val x = (centerX - w / 2f).coerceIn(0f, 1f - w)
+    val y = (centerY - h / 2f).coerceIn(0f, 1f - h)
+
+    return FrameRegion(
         name = name,
-        x = 0.20f,
-        y = 0.10f,
-        width = 0.60f,
-        height = 0.80f,
+        x = x,
+        y = y,
+        width = w,
+        height = h,
         outputX = outputX,
         outputY = outputY,
         outputWidth = outputWidth,
         outputHeight = outputHeight
     )
+}
+
+private fun templateFrames(
+    id: Int,
+    videoAspect: Float,
+    canvasAspect: Float
+): List<FrameRegion> {
+    fun f(
+        name: String,
+        ox: Float, oy: Float, ow: Float, oh: Float,
+        cx: Float
+    ) = fitCrop(name, videoAspect, canvasAspect, ox, oy, ow, oh, cx)
 
     return when (id) {
         1 -> listOf(
-            frame("Speaker 1", 0f, 0f, 1f, 0.5f),
-            frame("Speaker 2", 0f, 0.5f, 1f, 0.5f)
+            f("Speaker 1", 0f, 0f, 1f, 0.5f, 0.25f),
+            f("Speaker 2", 0f, 0.5f, 1f, 0.5f, 0.75f)
         )
         2 -> listOf(
-            frame("Speaker 1", 0f, 0f, 0.5f, 1f),
-            frame("Speaker 2", 0.5f, 0f, 0.5f, 1f)
+            f("Speaker 1", 0f, 0f, 0.5f, 1f, 0.25f),
+            f("Speaker 2", 0.5f, 0f, 0.5f, 1f, 0.75f)
         )
         3 -> listOf(
-            frame("Speaker 1", 0f, 0f, 0.62f, 1f),
-            frame("Speaker 2", 0.38f, 0f, 0.62f, 1f)
+            f("Speaker 1", 0f, 0f, 0.62f, 1f, 0.25f),
+            f("Speaker 2", 0.38f, 0f, 0.62f, 1f, 0.75f)
         )
         4 -> listOf(
-            frame("Main speaker", 0f, 0f, 1f, 1f),
-            frame("Inset speaker", 0.62f, 0.06f, 0.32f, 0.28f)
+            f("Main speaker", 0f, 0f, 1f, 1f, 0.25f),
+            f("Inset speaker", 0.62f, 0.06f, 0.32f, 0.28f, 0.75f)
         )
         5 -> listOf(
-            frame("Main speaker", 0f, 0f, 1f, 0.6f),
-            frame("Second speaker", 0f, 0.6f, 1f, 0.4f)
+            f("Main speaker", 0f, 0f, 1f, 0.6f, 0.25f),
+            f("Second speaker", 0f, 0.6f, 1f, 0.4f, 0.75f)
         )
         6 -> listOf(
-            frame("Main view", 0f, 0f, 1f, 1f),
-            frame("Inset 1", 0.04f, 0.06f, 0.28f, 0.25f),
-            frame("Inset 2", 0.68f, 0.06f, 0.28f, 0.25f)
+            f("Main view", 0f, 0f, 1f, 1f, 0.5f),
+            f("Inset 1", 0.04f, 0.06f, 0.28f, 0.25f, 0.25f),
+            f("Inset 2", 0.68f, 0.06f, 0.28f, 0.25f, 0.75f)
         )
         else -> emptyList()
     }
@@ -164,9 +198,11 @@ private fun templateFrames(id: Int): List<FrameRegion> {
 
 private fun applyTemplateToFrames(
     templateId: Int,
-    existingFrames: List<FrameRegion>
+    existingFrames: List<FrameRegion>,
+    videoAspect: Float,
+    canvasAspect: Float
 ): List<FrameRegion> {
-    val placements = templateFrames(templateId)
+    val placements = templateFrames(templateId, videoAspect, canvasAspect)
 
     return placements.mapIndexed { index, placement ->
         val existing = existingFrames.getOrNull(index)
@@ -174,8 +210,33 @@ private fun applyTemplateToFrames(
         if (existing == null) {
             placement
         } else {
+            // Face detection wale frames ka center rakho, sirf aspect refit karo.
+            val fit = if (existing.name.startsWith("Face")) {
+                fitCrop(
+                    existing.name,
+                    videoAspect,
+                    canvasAspect,
+                    placement.outputX,
+                    placement.outputY,
+                    placement.outputWidth,
+                    placement.outputHeight,
+                    existing.x + existing.width / 2f,
+                    existing.y + existing.height / 2f
+                )
+            } else {
+                placement
+            }
+
             existing.copy(
-                name = placement.name,
+                name = if (existing.name.startsWith("Face")) {
+                    existing.name
+                } else {
+                    placement.name
+                },
+                x = fit.x,
+                y = fit.y,
+                width = fit.width,
+                height = fit.height,
                 outputX = placement.outputX,
                 outputY = placement.outputY,
                 outputWidth = placement.outputWidth,
@@ -184,9 +245,6 @@ private fun applyTemplateToFrames(
         }
     }
 }
-
-
-
 
 private data class EditorSnapshot(
     val clips: List<ClipSegment>,
@@ -2105,6 +2163,8 @@ Column(
             if (updatedFrame == frame) return
 
             saveUndoState()
+            val videoSize = player.videoSize
+
 
             clips = clips.map { currentClip ->
                 if (currentClip.id == clip.id) {
