@@ -1177,41 +1177,55 @@ val videoAspect =
                 }
             },
             onSelectRatio = { ratio ->
-                val currentId = selectedClipId
+    val currentId = selectedClipId
 
-                if (currentId == null) {
-                    showMessage(
-                        context,
-                        "Select or add a clip first"
-                    )
-                } else {
-                    saveUndoState()
-
-                    clip.copy(aspectRatio = ratio).let { updated ->
-    if (
-        updated.frameLayout != "CUSTOM" &&
-        updated.frameLayout != "SINGLE" &&
-        selectedTemplate != 3
-    ) {
-        updated.copy(
-            frames = applyTemplateToFrames(
-                templateId = selectedTemplate,
-                existingFrames = updated.frames,
-                videoAspect = videoAspect,
-                canvasAspect = canvasAspectOf(ratio)
-            )
+    if (currentId == null) {
+        showMessage(
+            context,
+            "Select or add a clip first"
         )
     } else {
-        updated
-    }
-}
+        saveUndoState()
 
-                    showMessage(
-                        context,
-                        "Aspect ratio set to $ratio"
+        val videoSize = player.videoSize
+        val videoAspect =
+            if (videoSize.width > 0 && videoSize.height > 0) {
+                videoSize.width.toFloat() / videoSize.height.toFloat()
+            } else {
+                16f / 9f
+            }
+
+        clips = clips.map { clip ->
+            if (clip.id == currentId) {
+                val updated = clip.copy(aspectRatio = ratio)
+
+                if (
+                    updated.frameLayout != "CUSTOM" &&
+                    updated.frameLayout != "SINGLE" &&
+                    selectedTemplate != 3
+                ) {
+                    updated.copy(
+                        frames = applyTemplateToFrames(
+                            templateId = selectedTemplate,
+                            existingFrames = updated.frames,
+                            videoAspect = videoAspect,
+                            canvasAspect = canvasAspectOf(ratio)
+                        )
                     )
+                } else {
+                    updated
                 }
-            },
+            } else {
+                clip
+            }
+        }
+
+        showMessage(
+            context,
+            "Aspect ratio set to $ratio"
+        )
+    }
+},
             onBack = {
                 toolMode = ToolMode.MAIN
             }
