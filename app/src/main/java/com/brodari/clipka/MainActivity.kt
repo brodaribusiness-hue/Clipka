@@ -1141,6 +1141,13 @@ private fun EditorScreen(
                         )
                     } else {
                         saveUndoState()
+                        val videoSize = player.videoSize
+val videoAspect =
+    if (videoSize.width > 0 && videoSize.height > 0) {
+        videoSize.width.toFloat() / videoSize.height.toFloat()
+    } else {
+        16f / 9f
+    }
 
                         clips = clips.map { clip ->
                             if (clip.id == currentId) {
@@ -1149,9 +1156,11 @@ private fun EditorScreen(
                                         template.id
                                     ),
                                     frames = applyTemplateToFrames(
-                                        templateId = template.id,
-                                        existingFrames = clip.frames
-                                    )
+    templateId = template.id,
+    existingFrames = clip.frames,
+    videoAspect = videoAspect,
+    canvasAspect = canvasAspectOf(clip.aspectRatio)
+)
                                 )
                             } else {
                                 clip
@@ -1178,13 +1187,24 @@ private fun EditorScreen(
                 } else {
                     saveUndoState()
 
-                    clips = clips.map { clip ->
-                        if (clip.id == currentId) {
-                            clip.copy(aspectRatio = ratio)
-                        } else {
-                            clip
-                        }
-                    }
+                    clip.copy(aspectRatio = ratio).let { updated ->
+    if (
+        updated.frameLayout != "CUSTOM" &&
+        updated.frameLayout != "SINGLE" &&
+        selectedTemplate != 3
+    ) {
+        updated.copy(
+            frames = applyTemplateToFrames(
+                templateId = selectedTemplate,
+                existingFrames = updated.frames,
+                videoAspect = videoAspect,
+                canvasAspect = canvasAspectOf(ratio)
+            )
+        )
+    } else {
+        updated
+    }
+}
 
                     showMessage(
                         context,
@@ -3300,8 +3320,8 @@ private fun PreviewScreen(
                 ToolButton(
                     label = template.title,
                     icon = Icons.Default.ViewQuilt,
-                    active = selectedClip?.frameLayout ==
-                        templateLayout(template.id),
+                    active = selectedTemplate == template.id &&
+    selectedClip?.frameLayout == templateLayout(template.id),
                     onClick = {
                         onSelectTemplate(template)
                     }
